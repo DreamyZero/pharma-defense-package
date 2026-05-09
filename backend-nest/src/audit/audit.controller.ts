@@ -1,13 +1,20 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/guards/roles.decorator';
+import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { AuditService } from './audit.service';
+
+@ApiTags('audit')
+@ApiBearerAuth()
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AuditController {
-  constructor(private readonly service: AuditService) {}
-  @Get()
+  constructor(private readonly auditService: AuditService) {}
+
   @Roles('ADMIN')
-  list(){ return this.service.list(); }
+  @ApiOperation({ summary: 'Журнал аудита (только ADMIN)' })
+  @Get()
+  list() {
+    return this.auditService.list();
+  }
 }

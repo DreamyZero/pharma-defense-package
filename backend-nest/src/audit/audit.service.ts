@@ -1,10 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+
 @Injectable()
 export class AuditService {
-  private rows = [
-    { time:'2025-05-01T02:00:00', user:'admin@pharma.local', action:'IMPORT_START', entity:'DrugImport', ip:'127.0.0.1' },
-    { time:'2025-05-01T02:08:00', user:'admin@pharma.local', action:'IMPORT_COMPLETE', entity:'DrugImport', ip:'127.0.0.1' },
-    { time:'2025-05-01T11:30:00', user:'doctor@pharma.local', action:'SEARCH', entity:'Drug', ip:'127.0.0.1' }
-  ];
-  list(){ return this.rows; }
+  constructor(private prisma: PrismaService) {}
+
+  async list(take = 100) {
+    return this.prisma.auditLog.findMany({
+      take,
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, email: true, fullName: true } } },
+    });
+  }
+
+  async log(data: {
+    userId?: number;
+    action: string;
+    entityType?: string;
+    entityId?: string;
+    oldValues?: any;
+    newValues?: any;
+    ipAddress?: string;
+  }) {
+    return this.prisma.auditLog.create({ data });
+  }
 }

@@ -1,0 +1,8 @@
+{
+    "version":3,
+    "file":"database.module.js",
+    "sourceRoot":"",
+    "sources":["../../../src/database/database.module.ts"],
+    "names":[],
+    "mappings":";;;;;;;;;AAAA,2CAAgD;AAChD,qDAAiD;AACgC,IAAM,cAAc,GAApB,MAAM,cAAc;CAAG,CAAA;AAAjB,wCAAc;yBAAd,cAAc;IAApG,IAAA,eAAM,GAAE;IAAE,IAAA,eAAM,EAAC,EAAE,SAAS,EAAC,CAAC,8BAAa,CAAC,EAAE,OAAO,EAAC,CAAC,8BAAa,CAAC,EAAE,CAAC;GAAc,cAAc,CAAG"
+}

@@ -1,0 +1,6 @@
+1. docker compose up -d
+2. npm install && npm run start:dev in backend-nest
+3. npm install && npm run dev in frontend-react
+4. bash etl/src/run_full_ingestion.sh
+5. login as admin@pharma.local
+6. show ETL, audit, search, interactions, analogs, contraindications

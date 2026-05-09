@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: pharma, POSTGRES_USER: pharma, POSTGRES_PASSWORD: pharma }
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+  neo4j:
+    image: neo4j:5-community
+    environment: { NEO4J_AUTH: neo4j/password12345 }
+    ports: ["7474:7474","7687:7687"]
+    volumes: ["neo4jdata:/data"]
+  backend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes: ["./backend-nest:/app"]
+    command: sh -c "npm install && npm run start:dev"
+    ports: ["3001:3001"]
+    depends_on: [postgres, neo4j]
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes: ["./frontend:/app"]
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports: ["5173:5173"]
+    depends_on: [backend]
+volumes: { pgdata: {}, neo4jdata: {} }

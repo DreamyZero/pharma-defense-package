@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: pharma
+      POSTGRES_USER: pharma
+      POSTGRES_PASSWORD: pharma
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../backend-nest/sql:/docker-entrypoint-initdb.d
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/pharma12345
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4jdata:/data
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+volumes:
+  pgdata:
+  neo4jdata:

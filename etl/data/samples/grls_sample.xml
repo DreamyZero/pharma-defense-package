@@ -1,0 +1,23 @@
+<grls>
+  <drug>
+    <name>Аспирин</name>
+    <substance>Ацетилсалициловая кислота</substance>
+    <atc>N02BA01</atc>
+    <group>НПВС</group>
+    <indications>
+      <item>боль</item>
+      <item>жар</item>
+      <item>тромбоз</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Метформин</name>
+    <substance>Метформина гидрохлорид</substance>
+    <atc>A10BA02</atc>
+    <group>Гипогликемические средства</group>
+    <indications>
+      <item>диабет</item>
+      <item>гипергликемия</item>
+    </indications>
+  </drug>
+</grls>

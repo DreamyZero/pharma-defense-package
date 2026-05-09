@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  DOCTOR
+  PHARMACIST
+  ADMIN
+}
+
+enum ImportStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum InteractionSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CONTRAINDICATED
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  fullName       String
+  email          String   @unique
+  passwordHash   String
+  role           UserRole @default(DOCTOR)
+  organization   String?
+  verified       Boolean  @default(false)
+  favoritesNeo4j Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  auditLogs     AuditLog[]
+  imports       DrugImport[]   @relation("ImportCreator")
+  favoriteDrugs FavoriteDrug[]
+
+  @@map("users")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  action     String
+  entityType String?
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model DrugImport {
+  id               Int          @id @default(autoincrement())
+  source           String
+  status           ImportStatus @default(PENDING)
+  recordsProcessed Int          @default(0)
+  recordsFailed    Int          @default(0)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  errorLog         String?
+  createdBy        Int?
+  auditId          Int?
+  createdAt        DateTime     @default(now())
+
+  creator User? @relation("ImportCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([createdBy])
+  @@map("drug_imports")
+}
+
+model Drug {
+  id           Int      @id @default(autoincrement())
+  name         String
+  slug         String   @unique
+  dosageForm   String?
+  manufacturer String?
+  atcCode      String?
+  rxRequired   Boolean  @default(false)
+  description  String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  substances        DrugSubstance[]
+  analogsFrom       DrugAnalog[]       @relation("DrugAnalogSource")
+  analogsTo         DrugAnalog[]       @relation("DrugAnalogTarget")
+  contraindications Contraindication[]
+  favorites         FavoriteDrug[]
+  interactionA      DrugInteraction[]  @relation("InteractionDrugA")
+  interactionB      DrugInteraction[]  @relation("InteractionDrugB")
+
+  @@index([name])
+  @@index([slug])
+  @@index([atcCode])
+  @@map("drugs")
+}
+
+model Substance {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  latinName   String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  drugs        DrugSubstance[]
+  synonymLinks SubstanceSynonym[]
+  interactionA SubstanceInteraction[] @relation("InteractionSubstanceA")
+  interactionB SubstanceInteraction[] @relation("InteractionSubstanceB")
+
+  @@index([name])
+  @@map("substances")
+}
+
+model SubstanceSynonym {
+  id          Int      @id @default(autoincrement())
+  substanceId Int
+  synonym     String
+  createdAt   DateTime @default(now())
+
+  substance Substance @relation(fields: [substanceId], references: [id], onDelete: Cascade)
+
+  @@unique([substanceId, synonym])
+  @@index([synonym])
+  @@map("substance_synonyms")
+}
+
+model DrugSubstance {
+  drugId        Int
+  substanceId   Int
+  strengthValue Decimal? @db.Decimal(10, 2)
+  strengthUnit  String?
+  isPrimary     Boolean  @default(false)
+
+  drug      Drug      @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  substance Substance @relation(fields: [substanceId], references: [id], onDelete: Cascade)
+
+  @@id([drugId, substanceId])
+  @@index([substanceId])
+  @@map("drug_substances")
+}
+
+model DrugAnalog {
+  id           Int      @id @default(autoincrement())
+  sourceDrugId Int
+  targetDrugId Int
+  reason       String?
+  confidence   Int? // 1..100
+  createdAt    DateTime @default(now())
+
+  sourceDrug Drug @relation("DrugAnalogSource", fields: [sourceDrugId], references: [id], onDelete: Cascade)
+  targetDrug Drug @relation("DrugAnalogTarget", fields: [targetDrugId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceDrugId, targetDrugId])
+  @@index([targetDrugId])
+  @@map("drug_analogs")
+}
+
+model DrugInteraction {
+  id             Int                 @id @default(autoincrement())
+  drugAId        Int
+  drugBId        Int
+  severity       InteractionSeverity
+  mechanism      String?
+  clinicalEffect String?
+  recommendation String?
+  source         String?
+  createdAt      DateTime            @default(now())
+
+  drugA Drug @relation("InteractionDrugA", fields: [drugAId], references: [id], onDelete: Cascade)
+  drugB Drug @relation("InteractionDrugB", fields: [drugBId], references: [id], onDelete: Cascade)
+
+  @@unique([drugAId, drugBId])
+  @@index([drugBId])
+  @@map("drug_interactions")
+}
+
+model SubstanceInteraction {
+  id             Int                 @id @default(autoincrement())
+  substanceAId   Int
+  substanceBId   Int
+  severity       InteractionSeverity
+  mechanism      String?
+  clinicalEffect String?
+  recommendation String?
+  source         String?
+  createdAt      DateTime            @default(now())
+
+  substanceA Substance @relation("InteractionSubstanceA", fields: [substanceAId], references: [id], onDelete: Cascade)
+  substanceB Substance @relation("InteractionSubstanceB", fields: [substanceBId], references: [id], onDelete: Cascade)
+
+  @@unique([substanceAId, substanceBId])
+  @@index([substanceBId])
+  @@map("substance_interactions")
+}
+
+model Contraindication {
+  id        Int      @id @default(autoincrement())
+  drugId    Int
+  condition String
+  minAge    Int?
+  maxAge    Int?
+  context   String?
+  severity  String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  drug Drug @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@index([drugId])
+  @@index([condition])
+  @@map("contraindications")
+}
+
+model FavoriteDrug {
+  userId    Int
+  drugId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drug Drug @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@id([userId, drugId])
+  @@map("favorite_drugs")
+}

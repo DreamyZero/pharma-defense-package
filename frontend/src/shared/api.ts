@@ -1,7 +1,7 @@
 import { Drug } from '../types';
 import { getToken } from '../auth/auth';
 
-const API = 'http://localhost:3000';
+const API = 'http://localhost:3001';
 
 async function req(path: string, options: RequestInit = {}) {
   const token = getToken();
@@ -61,9 +61,7 @@ export async function getInteractions(items: string) {
 }
 export async function getAnalogs(name: string) {
   const value = name.trim();
-  if (!value) {
-    throw new Error('Введите название препарата');
-  }
+  if (!value) throw new Error('Введите название препарата');
   return req(`/analogs/${encodeURIComponent(value)}`);
 }
 export async function getContra(payload: { drug: string; age: number; context: string }) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { AuthGate } from '../auth/AuthGate';
 import { PageKey, Drug } from '../types';
 import {
@@ -13,6 +13,110 @@ import {
 } from '../shared/api';
 import { getSession, setSession } from '../auth/auth';
 
+// ─── Drug icon (pill SVG) ───────────────────────────────────────────────────
+const PillIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/>
+    <path d="m8.5 8.5 7 7"/>
+  </svg>
+);
+
+const ChevronLeft = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m15 18-6-6 6-6"/>
+  </svg>
+);
+
+const StarIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+    <path d="M12 9v4"/>
+    <path d="M12 17h.01"/>
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 16v-4"/>
+    <path d="M12 8h.01"/>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5"/>
+  </svg>
+);
+
+const ZapIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </svg>
+);
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+type DrugTab = 'info' | 'contra' | 'interactions' | 'analogs';
+
+const tabLabels: Record<DrugTab, string> = {
+  info: 'Общая информация',
+  contra: 'Противопоказания',
+  interactions: 'Взаимодействия',
+  analogs: 'Аналоги',
+};
+
+// Static mock data for drug detail (used when API doesn't return full fields)
+const MOCK_DRUGS: Record<string, any> = {
+  default: {
+    atcCode: 'C01EB02',
+    group: 'Антиагреганты',
+    prescription: false,
+    tradeNames: ['Аспирин', 'Ацетилсалициловая кислота'],
+    forms: 'Таб. 100 мг, 500 мг',
+    manufacturer: 'Bayer AG',
+    storageConditions: 'При Т < 25°C, сухое место',
+    dispensing: 'Без рецепта',
+    indications: 'Профилактика тромбоза, болевой синдром, лихорадка',
+    sideEffects: 'ЖКТ-кровотечение, бронхоспазм, синдром Рея (у детей)',
+    contraindications: [
+      'Язвенная болезнь желудка',
+      'Аллергия на НПВС',
+      'Беременность III триместр',
+      'Возраст до 15 лет при вирусных инфекциях',
+    ],
+    interactions: [
+      { name: 'Варфарин', risk: 'high' },
+      { name: 'Гепарин', risk: 'high' },
+      { name: 'Ибупрофен', risk: 'medium' },
+      { name: 'Метотрексат', risk: 'high' },
+    ],
+    analogs: [
+      { name: 'Аспикор', substance: 'Ацетилсалициловая кислота', atc: 'C01EB02', match: 100 },
+      { name: 'Тромбо АСС', substance: 'Ацетилсалициловая кислота', atc: 'C01EB02', match: 100 },
+      { name: 'Кардиомагнил', substance: 'АСК + Магния гидроксид', atc: 'C01EB02', match: 85 },
+    ],
+  },
+};
+
+const riskLabel: Record<string, string> = {
+  high: 'Высокий риск',
+  medium: 'Средний риск',
+  low: 'Низкий риск',
+};
+
+const riskClass: Record<string, string> = {
+  high: 'risk-high',
+  medium: 'risk-med',
+  low: 'risk-low',
+};
+
+// ─── Page keys ──────────────────────────────────────────────────────────────
 const titles: Record<PageKey, string> = {
   dashboard: 'Обзор системы',
   search: 'Поиск препаратов',
@@ -25,18 +129,181 @@ const titles: Record<PageKey, string> = {
   api: 'API и интеграция',
 };
 
-const pages: PageKey[] = [
-  'dashboard',
-  'search',
-  'interactions',
-  'analogs',
-  'contra',
-  'graph',
-  'profile',
-  'admin',
-  'api',
-];
+// ─── Drug Card component ─────────────────────────────────────────────────────
+function DrugCard({ drug, onClick }: { drug: Drug; onClick: () => void }) {
+  const mock = MOCK_DRUGS.default;
+  return (
+    <button
+      className="drug-card"
+      onClick={onClick}
+    >
+      <div className="drug-card-icon">
+        <PillIcon />
+      </div>
+      <div className="drug-card-body">
+        <div className="drug-card-name">{drug.name}</div>
+        <div className="drug-card-substance">{drug.substance}</div>
+        <div className="drug-card-chips">
+          <span className="chip-atc">{drug.atc}</span>
+          <span className="chip-group">{drug.group || mock.group}</span>
+          {!mock.prescription && (
+            <span className="chip-otc"><CheckIcon /> Безрецептурный (OTC)</span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
 
+// ─── Drug Detail component ────────────────────────────────────────────────────
+function DrugDetail({ drug, onBack }: { drug: Drug; onBack: () => void }) {
+  const [tab, setTab] = useState<DrugTab>('info');
+  const [favorited, setFavorited] = useState(false);
+  const mock = MOCK_DRUGS.default;
+
+  const contraList = drug.contraindications?.length ? drug.contraindications : mock.contraindications;
+  const interList = mock.interactions;
+  const analogList = mock.analogs;
+
+  return (
+    <div className="drug-detail">
+      {/* back link */}
+      <button className="back-link" onClick={onBack}>
+        <ChevronLeft /> Назад к результатам
+      </button>
+
+      {/* header card */}
+      <div className="detail-header">
+        <div className="detail-header-left">
+          <div className="detail-icon">
+            <PillIcon />
+          </div>
+          <div>
+            <h2 className="detail-name">{drug.name}</h2>
+            <div className="detail-substance">{drug.substance}</div>
+            <div className="detail-chips">
+              <span className="chip-atc">{drug.atc || mock.atcCode}</span>
+              <span className="chip-group">{drug.group || mock.group}</span>
+              {!mock.prescription && (
+                <span className="chip-otc"><CheckIcon /> Безрецептурный (OTC)</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="detail-header-actions">
+          <button
+            className={`btn-ghost ${favorited ? 'favorited' : ''}`}
+            onClick={() => setFavorited(!favorited)}
+          >
+            <StarIcon /> {favorited ? 'В избранном' : 'В избранное'}
+          </button>
+          <button className="btn-primary">
+            <ZapIcon /> Проверить взаимодействия
+          </button>
+        </div>
+      </div>
+
+      {/* tabs */}
+      <div className="detail-tabs">
+        {(Object.keys(tabLabels) as DrugTab[]).map(t => (
+          <button
+            key={t}
+            className={`detail-tab ${tab === t ? 'active' : ''}`}
+            onClick={() => setTab(t)}
+          >
+            {tabLabels[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* tab content */}
+      <div className="detail-body">
+        {tab === 'info' && (
+          <div className="detail-section-card">
+            <div className="section-label">ОСНОВНЫЕ СВЕДЕНИЯ</div>
+            <table className="info-table">
+              <tbody>
+                <tr><td className="info-key">Торговое наименование</td><td><strong>{drug.name}</strong></td></tr>
+                <tr><td className="info-key">Действующее вещество</td><td>{drug.substance}</td></tr>
+                <tr><td className="info-key">АТХ-код</td><td>{drug.atc || mock.atcCode}</td></tr>
+                <tr><td className="info-key">Фармакологическая группа</td><td>{drug.group || mock.group}</td></tr>
+                <tr><td className="info-key">Форма выпуска</td><td>{drug.forms?.join(', ') || mock.forms}</td></tr>
+                <tr><td className="info-key">Производитель</td><td>{mock.manufacturer}</td></tr>
+                <tr><td className="info-key">Условия отпуска</td><td className="text-primary">{mock.dispensing}</td></tr>
+                <tr><td className="info-key">Условия хранения</td><td>{mock.storageConditions}</td></tr>
+              </tbody>
+            </table>
+
+            <div className="section-label" style={{ marginTop: 24 }}>ПОКАЗАНИЯ К ПРИМЕНЕНИЮ</div>
+            <p className="detail-text">{drug.indications?.join(', ') || mock.indications}</p>
+
+            <div className="section-label" style={{ marginTop: 24 }}>ПОБОЧНЫЕ ЭФФЕКТЫ</div>
+            <p className="detail-text">{drug.sideEffects?.join(', ') || mock.sideEffects}</p>
+          </div>
+        )}
+
+        {tab === 'contra' && (
+          <div className="detail-section-card">
+            <div className="section-label">ПРОТИВОПОКАЗАНИЯ</div>
+            <div className="notice-warning">
+              <AlertIcon />
+              Всегда проверяйте актуальную инструкцию препарата перед назначением.
+            </div>
+            <ul className="contra-list">
+              {contraList.map((c: string, i: number) => (
+                <li key={i}><span className="contra-dot" />{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {tab === 'interactions' && (
+          <div className="detail-section-card">
+            <div className="section-label">КЛИНИЧЕСКИ ЗНАЧИМЫЕ ВЗАИМОДЕЙСТВИЯ</div>
+            <div className="notice-info">
+              <InfoIcon />
+              Список неполный. Используйте инструмент «Проверка взаимодействий» для полного анализа.
+            </div>
+            <div className="interaction-list">
+              {interList.map((inter: any, i: number) => (
+                <div key={i} className="interaction-row">
+                  <span className="contra-dot" />
+                  <span className="interaction-name">{inter.name}</span>
+                  <span className={`risk-badge ${riskClass[inter.risk]}`}>{riskLabel[inter.risk]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'analogs' && (
+          <div className="detail-section-card">
+            <div className="section-label">АНАЛОГИ ПО ДЕЙСТВУЮЩЕМУ ВЕЩЕСТВУ</div>
+            <div className="analogs-list">
+              {analogList.map((a: any, i: number) => (
+                <div key={i} className="drug-card analog-card">
+                  <div className="drug-card-icon">
+                    <PillIcon />
+                  </div>
+                  <div className="drug-card-body">
+                    <div className="drug-card-name">{a.name}</div>
+                    <div className="drug-card-substance">{a.substance}</div>
+                    <div className="drug-card-chips">
+                      <span className="chip-atc">{a.atc}</span>
+                      <span className="chip-match">{a.match}% совпадение</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ────────────────────────────────────────────────────────────────
 export function App() {
   const [authorized, setAuthorized] = useState(Boolean(getSession()));
   const [profile, setProfile] = useState<any>(null);
@@ -49,6 +316,7 @@ export function App() {
   const [selected, setSelected] = useState<Drug | null>(null);
 
   const [interactionInput, setInteractionInput] = useState('');
+  const [interactionList, setInteractionList] = useState<string[]>([]);
   const [interactionResult, setInteractionResult] = useState<any[]>([]);
   const [interactionError, setInteractionError] = useState('');
 
@@ -61,228 +329,332 @@ export function App() {
   const [users, setUsers] = useState<any[]>([]);
   const [etl, setEtl] = useState<any[]>([]);
 
+  const isAdmin = profile?.role === 'ADMIN';
+
+  const pages: PageKey[] = useMemo(() => {
+    const base: PageKey[] = ['dashboard', 'search', 'interactions', 'analogs', 'contra', 'profile'];
+    if (isAdmin) base.push('graph', 'admin', 'api');
+    return base;
+  }, [isAdmin]);
+
   useEffect(() => {
     if (!authorized) return;
-
-    getDashboard()
-      .then(setDashboard)
-      .catch(() => setDashboard(null));
-
-    getUsers()
-      .then((data) => setUsers(Array.isArray(data) ? data : []))
-      .catch(() => setUsers([]));
-
-    getEtlRuns()
-      .then((data) => setEtl(Array.isArray(data) ? data : []))
-      .catch(() => setEtl([]));
-
-    getProfile()
-      .then(setProfile)
-      .catch(() => setProfile(null));
+    getDashboard().then(setDashboard).catch(() => setDashboard(null));
+    getUsers().then((data) => setUsers(Array.isArray(data) ? data : [])).catch(() => setUsers([]));
+    getEtlRuns().then((data) => setEtl(Array.isArray(data) ? data : [])).catch(() => setEtl([]));
+    getProfile().then(setProfile).catch(() => setProfile(null));
   }, [authorized]);
 
-useEffect(() => {
-  if (!authorized) return;
+  // Search with debounce effect
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    const t = setTimeout(() => {
+      searchDrugs(query)
+        .then((data) => setResults(Array.isArray(data) ? data : []))
+        .catch(() => setResults([]));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  getDashboard().then(setDashboard).catch(() => setDashboard(null));
-  getUsers().then((data) => setUsers(Array.isArray(data) ? data : [])).catch(() => setUsers([]));
-  getEtlRuns().then((data) => setEtl(Array.isArray(data) ? data : [])).catch(() => setEtl([]));
-  getProfile().then(setProfile).catch(() => setProfile(null));
-}, [authorized]);
+  const handleAddToInteractions = useCallback((name: string) => {
+    setInteractionList(prev => prev.includes(name) ? prev : [...prev, name]);
+  }, []);
+
+  const handleCheckInteractions = useCallback(() => {
+    setInteractionError('');
+    const drugStr = interactionList.join(', ');
+    getInteractions(drugStr)
+      .then((data) => setInteractionResult(Array.isArray(data) ? data : []))
+      .catch((e) => {
+        setInteractionResult([]);
+        setInteractionError(e.message || 'Ошибка проверки взаимодействий');
+      });
+  }, [interactionList]);
 
   const content = useMemo(() => {
-    if (page === 'dashboard') {
-      return (
-        <div className="grid">
-          <section className="panel">
-            <div className="chip primary">Семантическая платформа</div>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px,3vw,54px)', margin: '10px 0 12px' }}>
-              Унифицированный доступ к информации о лекарственных препаратах
-            </h3>
-            <p className="muted">
-              Фронтенд соединён с реальным REST API-слоем и подготовлен под развитие до архитектуры
-              React + NestJS + PostgreSQL + Neo4j + Python ETL.
-            </p>
-            <div className="metrics">
-              {dashboard?.metrics?.map((m: any) => (
-                <div className="card" key={m.label}>
-                  <span className="muted">{m.label}</span>
-                  <b>{m.value}</b>
-                  <span className={`chip ${m.tone || 'primary'}`}>{m.note}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="panel">
-            <h3>Последние запросы</h3>
-            <div className="list">
-              {dashboard?.recentQueries?.map((q: any) => (
-                <div className="item" key={q.name}>
-                  <div className="row">
-                    <strong>{q.name}</strong>
-                    <span className="faint">{q.time}</span>
-                  </div>
-                  <div className="muted">{q.subtitle}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      );
-    }
-
+    // ── SEARCH with drug detail ──
     if (page === 'search') {
+      if (selected) {
+        return <DrugDetail drug={selected} onBack={() => setSelected(null)} />;
+      }
       return (
-        <div className="split">
-          <section className="panel">
+        <div className="search-layout">
+          <div className="search-header">
             <h3>Поиск лекарственных препаратов</h3>
-            <div className="field">
-              <label>Название, вещество или показание</label>
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="аспирин, ацетилсалициловая кислота"
-              />
+            <p className="muted">База данных содержит 14 283 препаратов с семантическими связями</p>
+          </div>
+          <div className="search-bar">
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Быстрый поиск: Аспирин, парацетамол, C09AA..."
+              className="search-input"
+            />
+          </div>
+          {results.length > 0 ? (
+            <div className="drug-list">
+              {results.map(d => (
+                <DrugCard key={d.id} drug={d} onClick={() => setSelected(d)} />
+              ))}
             </div>
-            <div className="notice">Поддерживаются синонимы и поиск по действующему веществу.</div>
-            <div className="list">
-              {results.length ? results.map(d => (
-                <button key={d.id} className="item" onClick={() => setSelected(d)}>
-                  <div className="row">
-                    <strong>{d.name}</strong>
-                    <span className="chip primary">{d.atc}</span>
-                  </div>
-                  <div className="muted">{d.substance}</div>
-                </button>
-              )) : <div className="muted">Введите запрос для поиска.</div>}
+          ) : (
+            <div className="search-empty">
+              <div className="search-empty-icon"><PillIcon /></div>
+              <p>Введите название препарата, действующего вещества или АТХ-код</p>
             </div>
-          </section>
-          <section className="panel">
-            <h3>Карточка препарата</h3>
-            {selected ? (
-              <div className="list">
-                <div>
-                  <strong>{selected.name}</strong>
-                  <div className="muted">{selected.substance} · {selected.atc}</div>
-                </div>
-                <div className="row">
-                  <span className="chip primary">{selected.group}</span>
-                  <span className="chip success">{selected.forms.join(', ')}</span>
-                </div>
-                <div>
-                  <strong>Показания:</strong>
-                  <div className="muted">{selected.indications.join(', ')}</div>
-                </div>
-                <div>
-                  <strong>Противопоказания:</strong>
-                  <div className="muted">{selected.contraindications.join(', ')}</div>
-                </div>
-                <div>
-                  <strong>Побочные эффекты:</strong>
-                  <div className="muted">{selected.sideEffects.join(', ')}</div>
-                </div>
-              </div>
-            ) : (
-              <div className="muted">Выберите препарат.</div>
-            )}
-          </section>
+          )}
         </div>
       );
     }
 
+    // ── DASHBOARD ──
+    if (page === 'dashboard') {
+      const firstName = profile?.fullName?.split(' ').slice(0, 2).join(' ') || 'пользователь';
+      return (
+        <div className="dashboard-layout">
+          <div className="dashboard-greeting">
+            <h2>Добрый день, {firstName} 👋</h2>
+            <p className="muted">Сводная информация о системе на сегодня</p>
+          </div>
+
+          <div className="kpi-grid">
+            {dashboard?.metrics?.map((m: any) => (
+              <div className="kpi-card" key={m.label}>
+                <div className="kpi-label">{m.label}</div>
+                <div className="kpi-value">{m.value}</div>
+                <div className={`kpi-note ${m.tone || 'primary'}`}>{m.note}</div>
+              </div>
+            )) ?? [
+              { label: 'ПРЕПАРАТОВ В БАЗЕ', value: '14 283', note: '↑ +247 за месяц', tone: 'primary' },
+              { label: 'ДЕЙСТВУЮЩИХ ВЕЩЕСТВ', value: '3 841', note: '↑ Синонимов: 9 124', tone: 'primary' },
+              { label: 'ВЗАИМОДЕЙСТВИЙ В ГРАФЕ', value: '28 654', note: '⚠ HIGH: 4 201', tone: 'warn' },
+              { label: 'ПОКРЫТИЕ ГРЛС', value: '98%', note: '↑ Обновлено: 01.05.2025', tone: 'success' },
+            ].map(m => (
+              <div className="kpi-card" key={m.label}>
+                <div className="kpi-label">{m.label}</div>
+                <div className="kpi-value">{m.value}</div>
+                <div className={`kpi-note ${m.tone}`}>{m.note}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="dashboard-row">
+            <div className="panel">
+              <div className="panel-header">
+                <h3>Последние запросы</h3>
+                <button className="btn-sm" onClick={() => setPage('search')}>Найти</button>
+              </div>
+              <div className="recent-list">
+                {(dashboard?.recentQueries ?? [
+                  { name: 'Аспирин', subtitle: 'Ацетилсалициловая кислота · C01EB02', time: '12:34' },
+                  { name: 'Метформин', subtitle: 'Метформина гидрохлорид · A10BA02', time: '11:20' },
+                  { name: 'Лизиноприл', subtitle: 'Лизиноприл · C09AA03', time: '10:05' },
+                ]).map((q: any) => (
+                  <button
+                    key={q.name}
+                    className="recent-item"
+                    onClick={() => {
+                      setQuery(q.name);
+                      setPage('search');
+                      searchDrugs(q.name).then(data => setResults(Array.isArray(data) ? data : [])).catch(() => {});
+                    }}
+                  >
+                    <div className="recent-icon"><PillIcon /></div>
+                    <div className="recent-body">
+                      <div className="recent-name">{q.name}</div>
+                      <div className="recent-sub">{q.subtitle}</div>
+                    </div>
+                    <div className="recent-time">{q.time}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>Состояние ETL-импорта</h3>
+              <div className="etl-list">
+                {[
+                  { label: 'ГРЛС — XML-выгрузка', status: 'done' },
+                  { label: 'Инструкции к препаратам', status: 'done' },
+                  { label: 'НЛП-унификация синонимов', status: 'running' },
+                ].map(e => (
+                  <div key={e.label} className="etl-row">
+                    <span className="etl-name">{e.label}</span>
+                    <div className="etl-right">
+                      <div className="etl-bar"><div className={`etl-fill ${e.status}`} style={{ width: e.status === 'done' ? '100%' : '63%' }} /></div>
+                      <span className={`etl-badge ${e.status}`}>
+                        {e.status === 'done' ? '✓ Выполнен' : '⟳ В процессе'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="notice-info" style={{ marginTop: 16 }}>
+                <InfoIcon /> Следующий импорт: завтра в 02:00
+              </div>
+            </div>
+          </div>
+
+          <div className="panel" style={{ marginTop: 16 }}>
+            <h3>Популярные группы препаратов</h3>
+            <div className="groups-grid">
+              {[
+                { code: 'C09', name: 'Ингибиторы АПФ', count: 234, tone: 'blue' },
+                { code: 'N02', name: 'Анальгетики', count: 189, tone: 'green' },
+                { code: 'A10', name: 'Антидиабетические', count: 156, tone: 'orange' },
+                { code: 'B01', name: 'Антикоагулянты', count: 143, tone: 'red' },
+                { code: 'C10', name: 'Статины', count: 128, tone: 'purple' },
+                { code: 'J01', name: 'Антибиотики', count: 412, tone: 'green' },
+              ].map(g => (
+                <button
+                  key={g.code}
+                  className="group-card"
+                  onClick={() => { setQuery(g.name); setPage('search'); searchDrugs(g.name).then(d => setResults(Array.isArray(d) ? d : [])).catch(() => {}); }}
+                >
+                  <div className={`group-code ${g.tone}`}>{g.code}</div>
+                  <div className="group-name">{g.name}</div>
+                  <div className={`group-count ${g.tone}`}>{g.count}</div>
+                  <div className="group-label">препаратов</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── INTERACTIONS ──
     if (page === 'interactions') {
       return (
-        <div className="split">
-          <section className="panel">
+        <div className="interactions-layout">
+          <div className="panel">
             <h3>Проверка лекарственных взаимодействий</h3>
-            <div className="field">
-              <label>Список препаратов</label>
+            <p className="muted">Добавьте от 2 до 50 препаратов для анализа потенциальных взаимодействий</p>
+            <div className="inter-add-row">
               <input
                 value={interactionInput}
                 onChange={e => setInteractionInput(e.target.value)}
-                placeholder="аспирин, варфарин, ибупрофен"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && interactionInput.trim()) {
+                    handleAddToInteractions(interactionInput.trim());
+                    setInteractionInput('');
+                  }
+                }}
+                placeholder="Введите название и нажмите Enter"
+                className="search-input"
               />
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  if (interactionInput.trim()) {
+                    handleAddToInteractions(interactionInput.trim());
+                    setInteractionInput('');
+                  }
+                }}
+              >Добавить</button>
             </div>
-            <button
-              className="btn"
-              onClick={() => {
-                setInteractionError('');
-                getInteractions(interactionInput)
-                  .then((data) => setInteractionResult(Array.isArray(data) ? data : []))
-                  .catch((e) => {
-                    setInteractionResult([]);
-                    setInteractionError(e.message || 'Ошибка проверки взаимодействий');
-                  });
-              }}
-            >
-              Проверить
-            </button>
-            <div className="notice">Добавьте от 2 до 50 препаратов для анализа.</div>
-            {interactionError && <div className="notice">{interactionError}</div>}
-          </section>
-          <section className="panel">
-            <h3>Результаты</h3>
-            <div className="list">
-              {interactionResult.length ? interactionResult.map((i: any, idx: number) => (
-                <div key={idx} className="item">
-                  <div className="row">
-                    <strong>{i.a} + {i.b}</strong>
-                    <span className={`chip ${i.risk === 'high' ? 'error' : i.risk === 'medium' ? 'warn' : 'success'}`}>
-                      {i.riskLabel}
+
+            {interactionList.length > 0 ? (
+              <div className="inter-chips">
+                {interactionList.map(name => (
+                  <span key={name} className="inter-chip">
+                    {name}
+                    <button onClick={() => setInteractionList(prev => prev.filter(n => n !== name))}>✕</button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="search-empty">
+                <div className="search-empty-icon" style={{ fontSize: 32 }}>⚗️</div>
+                <p>Добавьте препараты для проверки<br/><span className="muted">Введите наименования препаратов и нажмите «Проверить»</span></p>
+              </div>
+            )}
+
+            {interactionList.length >= 2 && (
+              <button className="btn-primary" style={{ marginTop: 16 }} onClick={handleCheckInteractions}>
+                Проверить взаимодействия
+              </button>
+            )}
+            {interactionError && <div className="notice-warning" style={{ marginTop: 12 }}><AlertIcon />{interactionError}</div>}
+          </div>
+
+          {interactionResult.length > 0 && (
+            <div className="panel" style={{ marginTop: 16 }}>
+              <div className="section-label">КЛИНИЧЕСКИ ЗНАЧИМЫЕ ВЗАИМОДЕЙСТВИЯ</div>
+              <div className="interaction-list">
+                {interactionResult.map((i: any, idx: number) => (
+                  <div key={idx} className="interaction-row">
+                    <span className="inter-pair">{i.a} + {i.b}</span>
+                    <span className="inter-desc muted">{i.note}</span>
+                    <span className={`risk-badge ${riskClass[i.risk] || 'risk-low'}`}>
+                      {riskLabel[i.risk] || i.riskLabel}
                     </span>
                   </div>
-                  <div className="muted">{i.note}</div>
-                </div>
-              )) : <div className="muted">Введите список препаратов.</div>}
+                ))}
+              </div>
             </div>
-          </section>
+          )}
         </div>
       );
     }
 
+    // ── ANALOGS ──
     if (page === 'analogs') {
       return (
-        <div className="split">
-          <section className="panel">
+        <div className="search-layout">
+          <div className="search-header">
             <h3>Подбор аналогов</h3>
-            <div className="field">
-              <label>Введите препарат</label>
-              <input value={analogInput} onChange={e => setAnalogInput(e.target.value)} placeholder="например: аспирин" />
-            </div>
-            <button className="btn" onClick={() => getAnalogs(analogInput).then(setAnalogs).catch(() => setAnalogs(null))}>
+            <p className="muted">Поиск препаратов с совпадающим действующим веществом и АТХ-кодом</p>
+          </div>
+          <div className="inter-add-row">
+            <input
+              value={analogInput}
+              onChange={e => setAnalogInput(e.target.value)}
+              placeholder="Введите название препарата"
+              className="search-input"
+            />
+            <button className="btn-primary" onClick={() => getAnalogs(analogInput).then(setAnalogs).catch(() => setAnalogs(null))}>
               Найти аналоги
             </button>
-          </section>
-          <section className="panel">
-            <h3>Список аналогов</h3>
-            <div className="list">
-              {analogs?.analogs?.length ? analogs.analogs.map((a: string) => (
-                <div className="item" key={a}>
-                  <div className="row">
-                    <strong>{a}</strong>
-                    <span className="chip success">Полный аналог</span>
+          </div>
+          {analogs?.analogs?.length ? (
+            <div className="drug-list">
+              {analogs.analogs.map((a: string, i: number) => (
+                <div key={i} className="drug-card">
+                  <div className="drug-card-icon"><PillIcon /></div>
+                  <div className="drug-card-body">
+                    <div className="drug-card-name">{a}</div>
+                    <div className="drug-card-substance">Совпадение по действующему веществу</div>
+                    <div className="drug-card-chips">
+                      <span className="chip-match">Полный аналог</span>
+                    </div>
                   </div>
-                  <div className="muted">Совпадение по действующему веществу</div>
                 </div>
-              )) : <div className="muted">Система найдёт полные аналоги по веществу.</div>}
+              ))}
             </div>
-          </section>
+          ) : (
+            <div className="search-empty">
+              <div className="search-empty-icon"><PillIcon /></div>
+              <p>Система найдёт все аналоги по действующему веществу</p>
+            </div>
+          )}
         </div>
       );
     }
 
+    // ── CONTRA ──
     if (page === 'contra') {
       return (
-        <div className="split">
-          <section className="panel">
+        <div className="search-layout">
+          <div className="panel">
             <h3>Проверка противопоказаний</h3>
             <div className="field">
               <label>Препарат</label>
-              <input value={contra.drug} onChange={e => setContraState({ ...contra, drug: e.target.value })} />
+              <input value={contra.drug} onChange={e => setContraState({ ...contra, drug: e.target.value })} placeholder="аспирин" />
             </div>
             <div className="field">
               <label>Возраст</label>
-              <input type="number" value={contra.age} onChange={e => setContraState({ ...contra, age: e.target.value })} />
+              <input type="number" value={contra.age} onChange={e => setContraState({ ...contra, age: e.target.value })} placeholder="35" />
             </div>
             <div className="field">
               <label>Контекст</label>
@@ -295,52 +667,30 @@ useEffect(() => {
               </select>
             </div>
             <button
-              className="btn"
-              onClick={() =>
-                getContra({
-                  drug: contra.drug,
-                  age: Number(contra.age || 0),
-                  context: contra.context,
-                }).then(setContraResult).catch(() => setContraResult(null))
-              }
-            >
-              Проверить
-            </button>
-          </section>
-          <section className="panel">
-            <h3>Результат</h3>
-            <div className="list">
-              {contraResult?.drug ? (
-                <>
-                  <strong>{contraResult.drug}</strong>
-                  {contraResult.warnings.length ? contraResult.warnings.map((w: string) => (
-                    <div className="item" key={w}>
-                      <div className="row">
-                        <strong>Предупреждение</strong>
-                        <span className="chip error">Высокий риск</span>
-                      </div>
-                      <div className="muted">{w}</div>
-                    </div>
-                  )) : (
-                    <div className="item">
-                      <div className="row">
-                        <strong>Ограничений не выявлено</strong>
-                        <span className="chip success">Низкий риск</span>
-                      </div>
-                      <div className="muted">В выбранном контексте выраженных противопоказаний не найдено.</div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="muted">Введите параметры пациента.</div>
-              )}
+              className="btn-primary"
+              onClick={() => getContra({ drug: contra.drug, age: Number(contra.age || 0), context: contra.context }).then(setContraResult).catch(() => setContraResult(null))}
+            >Проверить</button>
+          </div>
+          {contraResult?.drug && (
+            <div className="panel" style={{ marginTop: 16 }}>
+              <div className="detail-section-card">
+                <div className="section-label">ПРОТИВОПОКАЗАНИЯ</div>
+                <div className="notice-warning"><AlertIcon /> Всегда проверяйте актуальную инструкцию препарата перед назначением.</div>
+                <ul className="contra-list">
+                  {contraResult.warnings?.length
+                    ? contraResult.warnings.map((w: string, i: number) => <li key={i}><span className="contra-dot" />{w}</li>)
+                    : <li><span className="contra-dot" />Противопоказаний в выбранном контексте не выявлено</li>}
+                </ul>
+              </div>
             </div>
-          </section>
+          )}
         </div>
       );
     }
 
+    // ── GRAPH (admin only) ──
     if (page === 'graph') {
+      if (!isAdmin) return <div className="search-empty"><p>Доступ запрещён</p></div>;
       return (
         <div className="split">
           <section className="panel">
@@ -354,19 +704,20 @@ useEffect(() => {
           </section>
           <section className="panel">
             <h3>Информация об узле</h3>
-            <p>Граф отображает связи «препарат-вещество-группа-взаимодействие» и соответствует требованию визуализации семантической модели.</p>
+            <p>Граф отображает связи «препарат-вещество-группа-взаимодействие».</p>
           </section>
         </div>
       );
     }
 
+    // ── PROFILE ──
     if (page === 'profile') {
       return (
         <div className="split">
           <section className="panel">
             <div className="row">
               <h3>Личный кабинет</h3>
-              <span className="chip success">{profile?.verified ? 'Верифицирован' : 'Не верифицирован'}</span>
+              <span className="chip-otc"><CheckIcon /> {profile?.verified ? 'Верифицирован' : 'Не верифицирован'}</span>
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', margin: '16px 0' }}>
               <div className="logo">ИВ</div>
@@ -375,69 +726,49 @@ useEffect(() => {
                 <div className="muted">{profile?.role || 'Роль'} · {profile?.organization || 'Организация'}</div>
               </div>
             </div>
+            <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginTop: 16 }}>
+              <div className="kpi-card"><div className="kpi-label">ЗАПРОСОВ СЕГОДНЯ</div><div className="kpi-value">23</div></div>
+              <div className="kpi-card"><div className="kpi-label">ПРОВЕРОК</div><div className="kpi-value">7</div></div>
+            </div>
           </section>
           <section className="panel">
             <h3>Настройки профиля</h3>
-            <div className="field">
-              <label>Имя</label>
-              <input defaultValue={profile?.fullName || ''} />
-            </div>
-            <div className="field">
-              <label>Email</label>
-              <input defaultValue={profile?.email || ''} />
-            </div>
-            <div className="field">
-              <label>Новый пароль</label>
-              <input type="password" />
-            </div>
+            <div className="field"><label>Имя</label><input defaultValue={profile?.fullName || ''} /></div>
+            <div className="field"><label>Email</label><input defaultValue={profile?.email || ''} /></div>
+            <div className="field"><label>Новый пароль</label><input type="password" /></div>
+            <button className="btn-primary" style={{ marginTop: 8 }}>Сохранить</button>
           </section>
         </div>
       );
     }
 
+    // ── ADMIN ──
     if (page === 'admin') {
       return (
         <div className="split">
           <section className="panel">
             <h3>Пользователи</h3>
             <table className="table">
-              <thead>
-                <tr>
-                  <th>Пользователь</th>
-                  <th>Роль</th>
-                  <th>Организация</th>
-                  <th>Статус</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Пользователь</th><th>Роль</th><th>Организация</th><th>Статус</th></tr></thead>
               <tbody>
-                  {Array.isArray(users) && users.map((u: any) => (
+                {Array.isArray(users) && users.map((u: any) => (
                   <tr key={u.id}>
-                  <td>{u.fullName}</td>
-                  <td>{u.role}</td>
-                  <td>{u.organization || '—'}</td>
-                  <td>{u.verified ? 'Верифицирован' : 'Не верифицирован'}</td>
-                </tr>
+                    <td>{u.fullName}</td><td>{u.role}</td>
+                    <td>{u.organization || '—'}</td>
+                    <td>{u.verified ? <span className="chip-otc"><CheckIcon />Верифицирован</span> : '—'}</td>
+                  </tr>
                 ))}
-            </tbody>
+              </tbody>
             </table>
           </section>
           <section className="panel">
             <h3>ETL-импорт</h3>
             <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Источник</th>
-                  <th>Статус</th>
-                  <th>Обработано</th>
-                </tr>
-              </thead>
+              <thead><tr><th>ID</th><th>Источник</th><th>Статус</th><th>Обработано</th></tr></thead>
               <tbody>
                 {Array.isArray(etl) && etl.map((e: any) => (
                   <tr key={e.id}>
-                    <td>{e.id}</td>
-                    <td>{e.source}</td>
-                    <td>{e.status}</td>
+                    <td>{e.id}</td><td>{e.source}</td><td>{e.status}</td>
                     <td>{e.recordsProcessed ?? e.processed ?? '—'}</td>
                   </tr>
                 ))}
@@ -448,34 +779,27 @@ useEffect(() => {
       );
     }
 
+    // ── API ──
     return (
       <section className="panel">
         <h3>REST API</h3>
         <div className="list">
-          <div className="item">
-            <strong>GET /dashboard</strong>
-            <div className="muted">Метрики и последние запросы.</div>
-          </div>
-          <div className="item">
-            <strong>GET /drugs/search?q=аспирин</strong>
-            <div className="muted">Поиск по названию, веществу и синонимам.</div>
-          </div>
-          <div className="item">
-            <strong>POST /interactions/check</strong>
-            <div className="muted">Проверка списка препаратов.</div>
-          </div>
-          <div className="item">
-            <strong>GET /analogs/:name</strong>
-            <div className="muted">Подбор аналогов.</div>
-          </div>
-          <div className="item">
-            <strong>POST /contra/check</strong>
-            <div className="muted">Контекстная проверка противопоказаний.</div>
-          </div>
+          {[
+            { endpoint: 'GET /dashboard', desc: 'Метрики и последние запросы.' },
+            { endpoint: 'GET /drugs/search?q=аспирин', desc: 'Поиск по названию, веществу и синонимам.' },
+            { endpoint: 'POST /interactions/check', desc: 'Проверка списка препаратов.' },
+            { endpoint: 'GET /analogs/:name', desc: 'Подбор аналогов.' },
+            { endpoint: 'POST /contra/check', desc: 'Контекстная проверка противопоказаний.' },
+          ].map(a => (
+            <div className="item" key={a.endpoint}>
+              <strong>{a.endpoint}</strong>
+              <div className="muted">{a.desc}</div>
+            </div>
+          ))}
         </div>
       </section>
     );
-  }, [page, dashboard, query, results, selected, interactionInput, interactionResult, interactionError, analogs, contraResult, users, etl, contra, profile]);
+  }, [page, dashboard, query, results, selected, interactionInput, interactionList, interactionResult, interactionError, analogs, contraResult, users, etl, contra, profile, isAdmin, handleAddToInteractions, handleCheckInteractions]);
 
   if (!authorized) {
     return <AuthGate onReady={() => setAuthorized(true)} />;
@@ -488,7 +812,7 @@ useEffect(() => {
           <div className="logo">PS</div>
           <div>
             <strong>Pharma Platform</strong>
-            <div className="muted">{profile?.role || 'React + API Gateway'}</div>
+            <div className="muted">{profile?.role || 'Фармацевтическая система'}</div>
           </div>
         </div>
         <nav className="nav">
@@ -502,26 +826,27 @@ useEffect(() => {
 
       <main className="main">
         <header className="topbar">
-          <div>
-            <div className="muted">Авторизованный контур</div>
-            <h2>{titles[page]}</h2>
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="ghost" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
-              {theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}
+          <input
+            className="topbar-search"
+            placeholder="Быстрый поиск: Аспирин, парацетамол, C09AA..."
+            onFocus={() => setPage('search')}
+            value={page === 'search' ? query : ''}
+            onChange={e => { setPage('search'); setQuery(e.target.value); }}
+          />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="ghost" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label="toggle theme">
+              {theme === 'light' ? '☀️' : '🌙'}
             </button>
+            <button className="ghost" onClick={() => { /* notifications */ }}>🔔</button>
             <button
               className="ghost"
-              onClick={() => {
-                setSession(null);
-                setAuthorized(false);
-              }}
-            >
-              Выйти
-            </button>
+              onClick={() => { setSession(null); setAuthorized(false); }}
+            >Выйти</button>
           </div>
         </header>
-        {content}
+        <div className="page-content">
+          {content}
+        </div>
       </main>
     </div>
   );

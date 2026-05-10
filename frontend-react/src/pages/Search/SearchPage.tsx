@@ -25,7 +25,16 @@ export const SearchPage = observer(() => {
       {drugsStore.isLoading && <div className="loading-state">Поиск...</div>}
       <div className="results-grid">
         {drugsStore.results.map(drug => (
-          <div key={drug.id} className="drug-card" onClick={() => drugsStore.fetchDrugDetail(drug.slug)}>
+          <div
+            key={drug.id}
+            className="drug-card"
+            onClick={() => {
+              // Guard: only call fetchDrugDetail if slug is defined
+              if (drug.slug) {
+                drugsStore.fetchDrugDetail(drug.slug);
+              }
+            }}
+          >
             <div className="drug-card__name">{drug.name}</div>
             <div className="drug-card__meta">
               {drug.atcCode && <span className="badge">{drug.atcCode}</span>}
@@ -63,10 +72,20 @@ export const SearchPage = observer(() => {
                 <h3>Взаимодействия</h3>
                 <ul>
                   {drugsStore.selectedDrug.interactionA?.map((ia, i) => (
-                    <li key={`a${i}`}><span className={`badge badge--${ia.severity?.toLowerCase() === 'high' ? 'danger' : ia.severity?.toLowerCase() === 'moderate' ? 'warning' : 'success'}`}>{ia.severity}</span> {ia.drugB.name}{ia.clinicalEffect ? ` — ${ia.clinicalEffect}` : ''}</li>
+                    <li key={`a${i}`}>
+                      <span className={`badge badge--${ia.severity?.toLowerCase() === 'high' ? 'danger' : ia.severity?.toLowerCase() === 'moderate' ? 'warning' : 'success'}`}>
+                        {ia.severity}
+                      </span>
+                      {' '}{ia.drugB.name}{ia.clinicalEffect ? ` — ${ia.clinicalEffect}` : ''}
+                    </li>
                   ))}
                   {drugsStore.selectedDrug.interactionB?.map((ib, i) => (
-                    <li key={`b${i}`}><span className={`badge badge--${ib.severity?.toLowerCase() === 'high' ? 'danger' : ib.severity?.toLowerCase() === 'moderate' ? 'warning' : 'success'}`}>{ib.severity}</span> {ib.drugA.name}{ib.clinicalEffect ? ` — ${ib.clinicalEffect}` : ''}</li>
+                    <li key={`b${i}`}>
+                      <span className={`badge badge--${ib.severity?.toLowerCase() === 'high' ? 'danger' : ib.severity?.toLowerCase() === 'moderate' ? 'warning' : 'success'}`}>
+                        {ib.severity}
+                      </span>
+                      {' '}{ib.drugA.name}{ib.clinicalEffect ? ` — ${ib.clinicalEffect}` : ''}
+                    </li>
                   ))}
                 </ul>
               </div>

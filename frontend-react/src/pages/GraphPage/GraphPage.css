@@ -52,7 +52,9 @@
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  /* Fix: explicit min-height so clientHeight is never 0 on first D3 render */
   height: 100%;
+  min-height: 560px;
 }
 
 .graph-svg {

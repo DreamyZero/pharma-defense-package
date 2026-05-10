@@ -39,6 +39,8 @@ const LEGEND = [
   { type: 'Contraindication', label: 'Противопок.' },
 ];
 
+const GRAPH_HEIGHT = 560;
+
 const GraphPage: React.FC = observer(() => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,8 +60,9 @@ const GraphPage: React.FC = observer(() => {
     const { nodes, edges } = graphStore;
     if (nodes.length === 0) return;
 
-    const W = containerRef.current.clientWidth;
-    const H = containerRef.current.clientHeight || 580;
+    // Use container width but fixed height constant to avoid 0px on first render
+    const W = containerRef.current.clientWidth || 800;
+    const H = GRAPH_HEIGHT;
 
     d3.select(svgRef.current).selectAll('*').remove();
 
@@ -158,7 +161,7 @@ const GraphPage: React.FC = observer(() => {
 
     node
       .append('text')
-      .text((d: any) => (d.label.length > 14 ? d.label.slice(0, 13) + '…' : d.label))
+      .text((d: any) => (d.label.length > 14 ? d.label.slice(0, 13) + '\u2026' : d.label))
       .attr('x', 0)
       .attr('y', (d: any) => (d.type === 'Drug' ? 28 : 20))
       .attr('text-anchor', 'middle')

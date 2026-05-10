@@ -1,9 +1,7 @@
-import axios from 'axios';
-export const API_BASE = 'http://localhost:3000';
-let token = '';
-export const setToken = (value:string) => { token = value; };
-export const api = axios.create({ baseURL: API_BASE });
-api.interceptors.request.use((config) => {
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// This file is intentionally left as a re-export of shared/api to avoid breaking
+// any potential future imports. The actual axios instance lives in shared/api.ts.
+export { api, API_BASE } from '../shared/api';
+export const setToken = (_value: string) => {
+  // No-op: token is read from sessionStorage on every request via shared/api interceptor.
+  // Kept for compatibility only.
+};

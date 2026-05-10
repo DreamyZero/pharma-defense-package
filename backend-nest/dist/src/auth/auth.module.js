@@ -18,6 +18,17 @@ let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
-    (0, common_1.Module)({ imports: [passport_1.PassportModule, jwt_1.JwtModule.register({ secret: process.env.JWT_SECRET || 'super-secret-key', signOptions: { expiresIn: '1d' } })], controllers: [auth_controller_1.AuthController], providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, roles_guard_1.RolesGuard], exports: [auth_service_1.AuthService] })
+    (0, common_1.Module)({
+        imports: [
+            passport_1.PassportModule,
+            jwt_1.JwtModule.register({
+                secret: process.env.JWT_SECRET || 'super-secret-key',
+                signOptions: { expiresIn: '8h' },
+            }),
+        ],
+        controllers: [auth_controller_1.AuthController],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, roles_guard_1.RolesGuard],
+        exports: [auth_service_1.AuthService, roles_guard_1.RolesGuard],
+    })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

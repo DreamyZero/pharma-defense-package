@@ -19,10 +19,42 @@ let AuthService = class AuthService {
         this.prisma = prisma;
         this.jwt = jwt;
     }
-    async register(dto) { const passwordHash = await bcrypt.hash(dto.password, 10); const user = await this.prisma.user.create({ data: { fullName: dto.fullName, email: dto.email, passwordHash, organization: dto.organization, role: dto.role || 'DOCTOR' } }); return this.sign(user.id, user.email, user.role); }
-    async login(dto) { const user = await this.prisma.user.findUnique({ where: { email: dto.email } }); if (!user || !(await bcrypt.compare(dto.password, user.passwordHash)))
-        throw new common_1.UnauthorizedException('Invalid credentials'); return this.sign(user.id, user.email, user.role); }
-    sign(id, email, role) { return { access_token: this.jwt.sign({ sub: id, email, role }) }; }
+    async register(dto) {
+        const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        if (existing)
+            throw new common_1.ConflictException('Email уже зарегистрирован');
+        const passwordHash = await bcrypt.hash(dto.password, 10);
+        const user = await this.prisma.user.create({
+            data: {
+                fullName: dto.fullName,
+                email: dto.email,
+                passwordHash,
+                organization: dto.organization,
+                role: dto.role || 'DOCTOR',
+            },
+        });
+        return this.sign(user.id, user.email, user.role);
+    }
+    async login(dto) {
+        const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+            throw new common_1.UnauthorizedException('Неверный email или пароль');
+        }
+        return this.sign(user.id, user.email, user.role);
+    }
+    async profile(userId) {
+        return this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, fullName: true, email: true, role: true, organization: true, verified: true, createdAt: true },
+        });
+    }
+    sign(id, email, role) {
+        return {
+            access_token: this.jwt.sign({ sub: id, email, role }),
+            role,
+            userId: id,
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([

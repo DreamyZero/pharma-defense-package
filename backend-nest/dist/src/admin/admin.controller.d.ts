@@ -1,3 +1,4 @@
+import { Role } from '../auth/roles.enum';
 import { AdminService } from './admin.service';
 export declare class AdminController {
     private readonly adminService;
@@ -11,7 +12,12 @@ export declare class AdminController {
         verified: boolean;
         createdAt: Date;
     }[]>;
-    audit(): import(".prisma/client").Prisma.PrismaPromise<{
+    audit(): import(".prisma/client").Prisma.PrismaPromise<({
+        user: {
+            email: string;
+            fullName: string;
+        } | null;
+    } & {
         id: number;
         createdAt: Date;
         userId: number | null;
@@ -21,13 +27,29 @@ export declare class AdminController {
         oldValues: import("@prisma/client/runtime/library").JsonValue | null;
         newValues: import("@prisma/client/runtime/library").JsonValue | null;
         ipAddress: string | null;
-    }[]>;
-    etl(): {
-        id: string;
+    })[]>;
+    etl(): import(".prisma/client").Prisma.PrismaPromise<({
+        creator: {
+            email: string;
+        } | null;
+    } & {
+        id: number;
+        createdAt: Date;
         source: string;
-        status: string;
-        processed: string;
-        errors: number;
-        time: string;
-    }[];
+        status: import(".prisma/client").$Enums.ImportStatus;
+        recordsProcessed: number;
+        recordsFailed: number;
+        startedAt: Date | null;
+        completedAt: Date | null;
+        errorLog: string | null;
+        createdBy: number | null;
+        auditId: number | null;
+    })[]>;
+    setRole(id: number, body: {
+        role: Role;
+    }): Promise<{
+        id: number;
+        email: string;
+        role: import(".prisma/client").$Enums.UserRole;
+    }>;
 }

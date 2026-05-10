@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles, RolesGuard } from '../auth/guards/roles.guard'; // ← добавлено
 import { GraphService } from './graph.service';
 
 @ApiTags('graph')
@@ -27,5 +28,14 @@ export class GraphController {
   @Post('interactions')
   interactionGraph(@Body() body: { drugs: string[] }) {
     return this.graphService.getInteractionGraph(body.drugs || []);
+  }
+
+  // ← добавлено
+  @ApiOperation({ summary: 'Синхронизировать Neo4j из PostgreSQL (только ADMIN)' })
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Post('sync')
+  sync() {
+    return this.graphService.syncFromPostgres();
   }
 }

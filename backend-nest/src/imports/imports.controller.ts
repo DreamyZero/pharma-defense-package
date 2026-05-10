@@ -3,13 +3,11 @@ import {
   Post,
   Get,
   UseGuards,
-  UseInterceptors,
-  UploadedFile,
   Body,
   HttpCode,
+  Request,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ImportsService } from './imports.service';
@@ -22,35 +20,17 @@ export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}
 
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Загрузить CSV с препаратами (только ADMIN)' })
-  @ApiConsumes('multipart/form-data')
-  @Post('drugs/csv')
-  @UseInterceptors(FileInterceptor('file'))
-  @HttpCode(200)
-  async importDrugsCsv(@UploadedFile() file: Express.Multer.File) {
-    return this.importsService.importDrugsCsv(file.buffer);
+  @ApiOperation({ summary: 'Список импортов (только ADMIN)' })
+  @Get()
+  list() {
+    return this.importsService.list();
   }
 
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Загрузить JSON с взаимодействиями (только ADMIN)' })
-  @Post('interactions/json')
+  @ApiOperation({ summary: 'Запустить ETL импорт (только ADMIN)' })
+  @Post('run')
   @HttpCode(200)
-  async importInteractionsJson(@Body() body: { data: any[] }) {
-    return this.importsService.importInteractionsJson(body.data);
-  }
-
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Синхронизация данных в Neo4j (только ADMIN)' })
-  @Post('neo4j/sync')
-  @HttpCode(200)
-  async syncNeo4j() {
-    return this.importsService.syncNeo4j();
-  }
-
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Статус последнего импорта' })
-  @Get('status')
-  status() {
-    return this.importsService.getStatus();
+  async run(@Body() body: { source: string }, @Request() req: any) {
+    return this.importsService.run(body.source, req.user?.id);
   }
 }

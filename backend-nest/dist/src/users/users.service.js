@@ -16,8 +16,22 @@ let UsersService = class UsersService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    me(id) { return this.prisma.user.findUnique({ where: { id }, select: { id: true, fullName: true, email: true, role: true, organization: true, verified: true, createdAt: true } }); }
-    update(id, dto) { return this.prisma.user.update({ where: { id }, data: dto, select: { id: true, fullName: true, email: true, role: true, organization: true, verified: true } }); }
+    async me(id) {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+            select: { id: true, fullName: true, email: true, role: true, organization: true, verified: true, createdAt: true },
+        });
+        if (!user)
+            throw new common_1.NotFoundException('Пользователь не найден');
+        return user;
+    }
+    async update(id, dto) {
+        return this.prisma.user.update({
+            where: { id },
+            data: dto,
+            select: { id: true, fullName: true, email: true, role: true, organization: true, verified: true },
+        });
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

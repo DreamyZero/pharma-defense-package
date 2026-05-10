@@ -1,8 +1,1 @@
-{
-    "version":3,
-    "file":"drugs.module.js",
-    "sourceRoot":"",
-    "sources":["../../../src/drugs/drugs.module.ts"],
-    "names":[],
-    "mappings":";;;;;;;;;AAAA,2CAAwC;AACxC,yDAAqD;AACrD,mDAA+C;AAC/C,mEAA+D;AAC+B,IAAM,WAAW,GAAjB,MAAM,WAAW;CAAG,CAAA;AAAd,kCAAW;sBAAX,WAAW;IAA9G,IAAA,eAAM,EAAC,EAAE,WAAW,EAAC,CAAC,kCAAe,CAAC,EAAE,SAAS,EAAC,CAAC,4BAAY,EAAE,oCAAgB,CAAC,EAAE,CAAC;GAAc,WAAW,CAAG"
-}
+{"version":3,"file":"drugs.module.js","sourceRoot":"","sources":["../../../src/drugs/drugs.module.ts"],"names":[],"mappings":";;;;;;;;;AAAA,2CAAwC;AACxC,yDAAqD;AACrD,mDAA+C;AAC/C,mEAA+D;AAGxD,IAAM,WAAW,GAAjB,MAAM,WAAW;CAAG,CAAA;AAAd,kCAAW;sBAAX,WAAW;IADvB,IAAA,eAAM,EAAC,EAAE,WAAW,EAAE,CAAC,kCAAe,CAAC,EAAE,SAAS,EAAE,CAAC,4BAAY,EAAE,oCAAgB,CAAC,EAAE,CAAC;GAC3E,WAAW,CAAG"}

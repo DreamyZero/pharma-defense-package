@@ -11,25 +11,30 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuditController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
-const roles_decorator_1 = require("../auth/guards/roles.decorator");
 const audit_service_1 = require("./audit.service");
 let AuditController = class AuditController {
-    constructor(service) {
-        this.service = service;
+    constructor(auditService) {
+        this.auditService = auditService;
     }
-    list() { return this.service.list(); }
+    list() {
+        return this.auditService.list();
+    }
 };
 exports.AuditController = AuditController;
 __decorate([
+    (0, roles_guard_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Журнал аудита (только ADMIN)' }),
     (0, common_1.Get)(),
-    (0, roles_decorator_1.Roles)('ADMIN'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AuditController.prototype, "list", null);
 exports.AuditController = AuditController = __decorate([
+    (0, swagger_1.ApiTags)('audit'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('audit'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [audit_service_1.AuditService])

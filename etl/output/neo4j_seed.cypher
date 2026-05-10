@@ -1,60 +1,60 @@
 MATCH (n) DETACH DELETE n;
-MERGE (drug:Drug {drugId:1, name:'Аспирин', atc:'C01EB02', slug:'аспирин'})
-MERGE (sub:Substance {name:'Ацетилсалициловая кислота'})
-MERGE (grp:Group {name:'НПВС'})
-MERGE (drug)-[:CONTAINS]->(sub)
-MERGE (drug)-[:BELONGS_TO]->(grp)
-MERGE (drug:Drug {drugId:2, name:'Метформин', atc:'A10BA02', slug:'метформин'})
-MERGE (sub:Substance {name:'Метформина гидрохлорид'})
-MERGE (grp:Group {name:'Гипогликемические средства'})
-MERGE (drug)-[:CONTAINS]->(sub)
-MERGE (drug)-[:BELONGS_TO]->(grp)
-MERGE (drug:Drug {drugId:3, name:'Лизиноприл', atc:'C09AA03', slug:'лизиноприл'})
-MERGE (sub:Substance {name:'Лизиноприл'})
-MERGE (grp:Group {name:'Ингибиторы АПФ'})
-MERGE (drug)-[:CONTAINS]->(sub)
-MERGE (drug)-[:BELONGS_TO]->(grp)
-MERGE (drug:Drug {drugId:4, name:'Варфарин', atc:'B01AA03', slug:'варфарин'})
-MERGE (sub:Substance {name:'Варфарин'})
-MERGE (grp:Group {name:'Антикоагулянты'})
-MERGE (drug)-[:CONTAINS]->(sub)
-MERGE (drug)-[:BELONGS_TO]->(grp)
-MERGE (drug:Drug {drugId:5, name:'Ибупрофен', atc:'M01AE01', slug:'ибупрофен'})
-MERGE (sub:Substance {name:'Ибупрофен'})
-MERGE (grp:Group {name:'НПВС'})
-MERGE (drug)-[:CONTAINS]->(sub)
-MERGE (drug)-[:BELONGS_TO]->(grp)
-MATCH (drug:Drug {drugId:1}) MERGE (ind:Indication {name:'боль'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:1}) MERGE (ind:Indication {name:'жар'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:1}) MERGE (ind:Indication {name:'тромбоз'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:2}) MERGE (ind:Indication {name:'диабет'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:2}) MERGE (ind:Indication {name:'гипергликемия'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:3}) MERGE (ind:Indication {name:'гипертензия'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:3}) MERGE (ind:Indication {name:'сердечная недостаточность'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:4}) MERGE (ind:Indication {name:'тромбоз'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:4}) MERGE (ind:Indication {name:'фибрилляция предсердий'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:5}) MERGE (ind:Indication {name:'боль'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:5}) MERGE (ind:Indication {name:'воспаление'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:5}) MERGE (ind:Indication {name:'жар'}) MERGE (drug)-[:INDICATED_FOR]->(ind)
-MATCH (drug:Drug {drugId:1}) MERGE (con:Contraindication {name:'язвенная болезнь'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:1}) MERGE (con:Contraindication {name:'детский возраст'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:2}) MERGE (con:Contraindication {name:'почечная недостаточность'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:3}) MERGE (con:Contraindication {name:'беременность'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:3}) MERGE (con:Contraindication {name:'детский возраст'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:4}) MERGE (con:Contraindication {name:'беременность'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:5}) MERGE (con:Contraindication {name:'язвенная болезнь'}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)
-MATCH (drug:Drug {drugId:1}) MERGE (syn:Synonym {name:'ацетилсалициловая кислота'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:1}) MERGE (syn:Synonym {name:'аспикор'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:1}) MERGE (syn:Synonym {name:'тромбо асс'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:2}) MERGE (syn:Synonym {name:'метформина гидрохлорид'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:2}) MERGE (syn:Synonym {name:'глюкофаж'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:3}) MERGE (syn:Synonym {name:'диротон'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:3}) MERGE (syn:Synonym {name:'лизорил'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:4}) MERGE (syn:Synonym {name:'варфарекс'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:5}) MERGE (syn:Synonym {name:'нурофен'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:5}) MERGE (syn:Synonym {name:'миг'}) MERGE (syn)-[:REFERS_TO]->(drug)
-MATCH (drug:Drug {drugId:1}), (other:Drug {name:'Варфарин'}) MERGE (drug)-[:INTERACTS_WITH {risk:'high', note:'Повышается риск кровотечения'}]->(other)
-MATCH (drug:Drug {drugId:2}), (other:Drug {name:'Йодсодержащие контрасты'}) MERGE (drug)-[:INTERACTS_WITH {risk:'high', note:'Риск лактацидоза'}]->(other)
-MATCH (drug:Drug {drugId:3}), (other:Drug {name:'Спиронолактон'}) MERGE (drug)-[:INTERACTS_WITH {risk:'medium', note:'Риск гиперкалиемии'}]->(other)
-MATCH (drug:Drug {drugId:4}), (other:Drug {name:'Аспирин'}) MERGE (drug)-[:INTERACTS_WITH {risk:'high', note:'Повышается риск кровотечения'}]->(other)
-MATCH (drug:Drug {drugId:5}), (other:Drug {name:'Аспирин'}) MERGE (drug)-[:INTERACTS_WITH {risk:'medium', note:'Снижается антиагрегантный эффект'}]->(other)
+MERGE (d1:Drug {drugId:1, name:'Аспирин', atc:'C01EB02', slug:'аспирин'});
+MERGE (sub1:Substance {name:'Ацетилсалициловая кислота'});
+MERGE (grp1:Group {name:'НПВС'});
+MATCH (d1:Drug {drugId:1}), (sub1:Substance {name:'Ацетилсалициловая кислота'}) MERGE (d1)-[:CONTAINS]->(sub1);
+MATCH (d1:Drug {drugId:1}), (grp1:Group {name:'НПВС'}) MERGE (d1)-[:BELONGS_TO]->(grp1);
+MERGE (d2:Drug {drugId:2, name:'Метформин', atc:'A10BA02', slug:'метформин'});
+MERGE (sub2:Substance {name:'Метформина гидрохлорид'});
+MERGE (grp2:Group {name:'Гипогликемические средства'});
+MATCH (d2:Drug {drugId:2}), (sub2:Substance {name:'Метформина гидрохлорид'}) MERGE (d2)-[:CONTAINS]->(sub2);
+MATCH (d2:Drug {drugId:2}), (grp2:Group {name:'Гипогликемические средства'}) MERGE (d2)-[:BELONGS_TO]->(grp2);
+MERGE (d3:Drug {drugId:3, name:'Лизиноприл', atc:'C09AA03', slug:'лизиноприл'});
+MERGE (sub3:Substance {name:'Лизиноприл'});
+MERGE (grp3:Group {name:'Ингибиторы АПФ'});
+MATCH (d3:Drug {drugId:3}), (sub3:Substance {name:'Лизиноприл'}) MERGE (d3)-[:CONTAINS]->(sub3);
+MATCH (d3:Drug {drugId:3}), (grp3:Group {name:'Ингибиторы АПФ'}) MERGE (d3)-[:BELONGS_TO]->(grp3);
+MERGE (d4:Drug {drugId:4, name:'Варфарин', atc:'B01AA03', slug:'варфарин'});
+MERGE (sub4:Substance {name:'Варфарин'});
+MERGE (grp4:Group {name:'Антикоагулянты'});
+MATCH (d4:Drug {drugId:4}), (sub4:Substance {name:'Варфарин'}) MERGE (d4)-[:CONTAINS]->(sub4);
+MATCH (d4:Drug {drugId:4}), (grp4:Group {name:'Антикоагулянты'}) MERGE (d4)-[:BELONGS_TO]->(grp4);
+MERGE (d5:Drug {drugId:5, name:'Ибупрофен', atc:'M01AE01', slug:'ибупрофен'});
+MERGE (sub5:Substance {name:'Ибупрофен'});
+MERGE (grp5:Group {name:'НПВС'});
+MATCH (d5:Drug {drugId:5}), (sub5:Substance {name:'Ибупрофен'}) MERGE (d5)-[:CONTAINS]->(sub5);
+MATCH (d5:Drug {drugId:5}), (grp5:Group {name:'НПВС'}) MERGE (d5)-[:BELONGS_TO]->(grp5);
+MATCH (d:Drug {drugId:1}) MERGE (ind:Indication {name:'боль'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:1}) MERGE (ind:Indication {name:'жар'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:1}) MERGE (ind:Indication {name:'тромбоз'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:2}) MERGE (ind:Indication {name:'диабет'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:2}) MERGE (ind:Indication {name:'гипергликемия'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:3}) MERGE (ind:Indication {name:'гипертензия'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:3}) MERGE (ind:Indication {name:'сердечная недостаточность'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:4}) MERGE (ind:Indication {name:'тромбоз'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:4}) MERGE (ind:Indication {name:'фибрилляция предсердий'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:5}) MERGE (ind:Indication {name:'боль'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:5}) MERGE (ind:Indication {name:'воспаление'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:5}) MERGE (ind:Indication {name:'жар'}) MERGE (d)-[:INDICATED_FOR]->(ind);
+MATCH (d:Drug {drugId:1}) MERGE (con:Contraindication {name:'язвенная болезнь'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:1}) MERGE (con:Contraindication {name:'детский возраст'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:2}) MERGE (con:Contraindication {name:'почечная недостаточность'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:3}) MERGE (con:Contraindication {name:'беременность'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:3}) MERGE (con:Contraindication {name:'детский возраст'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:4}) MERGE (con:Contraindication {name:'беременность'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:5}) MERGE (con:Contraindication {name:'язвенная болезнь'}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);
+MATCH (d:Drug {drugId:1}) MERGE (syn:Synonym {name:'ацетилсалициловая кислота'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:1}) MERGE (syn:Synonym {name:'аспикор'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:1}) MERGE (syn:Synonym {name:'тромбо асс'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:2}) MERGE (syn:Synonym {name:'метформина гидрохлорид'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:2}) MERGE (syn:Synonym {name:'глюкофаж'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:3}) MERGE (syn:Synonym {name:'диротон'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:3}) MERGE (syn:Synonym {name:'лизорил'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:4}) MERGE (syn:Synonym {name:'варфарекс'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:5}) MERGE (syn:Synonym {name:'нурофен'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:5}) MERGE (syn:Synonym {name:'миг'}) MERGE (syn)-[:REFERS_TO]->(d);
+MATCH (d:Drug {drugId:1}), (other:Drug {name:'Варфарин'}) MERGE (d)-[:INTERACTS_WITH {risk:'high', note:'Повышается риск кровотечения'}]->(other);
+MATCH (d:Drug {drugId:2}), (other:Drug {name:'Йодсодержащие контрасты'}) MERGE (d)-[:INTERACTS_WITH {risk:'high', note:'Риск лактацидоза'}]->(other);
+MATCH (d:Drug {drugId:3}), (other:Drug {name:'Спиронолактон'}) MERGE (d)-[:INTERACTS_WITH {risk:'medium', note:'Риск гиперкалиемии'}]->(other);
+MATCH (d:Drug {drugId:4}), (other:Drug {name:'Аспирин'}) MERGE (d)-[:INTERACTS_WITH {risk:'high', note:'Повышается риск кровотечения'}]->(other);
+MATCH (d:Drug {drugId:5}), (other:Drug {name:'Аспирин'}) MERGE (d)-[:INTERACTS_WITH {risk:'medium', note:'Снижается антиагрегантный эффект'}]->(other);

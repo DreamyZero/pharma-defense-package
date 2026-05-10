@@ -1,12 +1,22 @@
 import { AuditService } from './audit.service';
 export declare class AuditController {
-    private readonly service;
-    constructor(service: AuditService);
-    list(): {
-        time: string;
-        user: string;
+    private readonly auditService;
+    constructor(auditService: AuditService);
+    list(): Promise<({
+        user: {
+            id: number;
+            email: string;
+            fullName: string;
+        } | null;
+    } & {
+        id: number;
+        createdAt: Date;
+        userId: number | null;
         action: string;
-        entity: string;
-        ip: string;
-    }[];
+        entityType: string | null;
+        entityId: string | null;
+        oldValues: import("@prisma/client/runtime/library").JsonValue | null;
+        newValues: import("@prisma/client/runtime/library").JsonValue | null;
+        ipAddress: string | null;
+    })[]>;
 }

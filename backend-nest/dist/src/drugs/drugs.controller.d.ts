@@ -2,10 +2,10 @@ import { DrugsService } from './drugs.service';
 export declare class DrugsController {
     private readonly drugsService;
     constructor(drugsService: DrugsService);
-    dashboard(): {
+    dashboard(): Promise<{
         metrics: {
             label: string;
-            value: string;
+            value: string | number;
             note: string;
         }[];
         recentQueries: {
@@ -13,8 +13,8 @@ export declare class DrugsController {
             subtitle: string;
             time: string;
         }[];
-    };
-    search(q?: string): {
+    }>;
+    search(q?: string): Promise<{
         id: number;
         name: string;
         substance: string;
@@ -30,30 +30,183 @@ export declare class DrugsController {
             risk: string;
             note: string;
         }[];
-    }[];
-    analogs(name: string): {
+    }[] | ({
+        substances: ({
+            substance: {
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                name: string;
+                latinName: string | null;
+                description: string | null;
+            };
+        } & {
+            substanceId: number;
+            drugId: number;
+            strengthValue: import("@prisma/client/runtime/library").Decimal | null;
+            strengthUnit: string | null;
+            isPrimary: boolean;
+        })[];
+    } & {
+        id: number;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        slug: string;
+        dosageForm: string | null;
+        manufacturer: string | null;
+        atcCode: string | null;
+        rxRequired: boolean;
+        active: boolean;
+    })[]>;
+    getBySlug(slug: string): Promise<({
+        interactionA: ({
+            drugB: {
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                name: string;
+                description: string | null;
+                slug: string;
+                dosageForm: string | null;
+                manufacturer: string | null;
+                atcCode: string | null;
+                rxRequired: boolean;
+                active: boolean;
+            };
+        } & {
+            id: number;
+            createdAt: Date;
+            source: string | null;
+            drugAId: number;
+            drugBId: number;
+            severity: import(".prisma/client").$Enums.InteractionSeverity;
+            mechanism: string | null;
+            clinicalEffect: string | null;
+            recommendation: string | null;
+        })[];
+        interactionB: ({
+            drugA: {
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                name: string;
+                description: string | null;
+                slug: string;
+                dosageForm: string | null;
+                manufacturer: string | null;
+                atcCode: string | null;
+                rxRequired: boolean;
+                active: boolean;
+            };
+        } & {
+            id: number;
+            createdAt: Date;
+            source: string | null;
+            drugAId: number;
+            drugBId: number;
+            severity: import(".prisma/client").$Enums.InteractionSeverity;
+            mechanism: string | null;
+            clinicalEffect: string | null;
+            recommendation: string | null;
+        })[];
+        substances: ({
+            substance: {
+                synonymLinks: {
+                    id: number;
+                    createdAt: Date;
+                    substanceId: number;
+                    synonym: string;
+                }[];
+            } & {
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                name: string;
+                latinName: string | null;
+                description: string | null;
+            };
+        } & {
+            substanceId: number;
+            drugId: number;
+            strengthValue: import("@prisma/client/runtime/library").Decimal | null;
+            strengthUnit: string | null;
+            isPrimary: boolean;
+        })[];
+        analogsFrom: ({
+            targetDrug: {
+                id: number;
+                createdAt: Date;
+                updatedAt: Date;
+                name: string;
+                description: string | null;
+                slug: string;
+                dosageForm: string | null;
+                manufacturer: string | null;
+                atcCode: string | null;
+                rxRequired: boolean;
+                active: boolean;
+            };
+        } & {
+            id: number;
+            createdAt: Date;
+            sourceDrugId: number;
+            targetDrugId: number;
+            reason: string | null;
+            confidence: number | null;
+        })[];
+        contraindications: {
+            id: number;
+            createdAt: Date;
+            drugId: number;
+            severity: string | null;
+            minAge: number | null;
+            condition: string;
+            maxAge: number | null;
+            context: string | null;
+            note: string | null;
+        }[];
+    } & {
+        id: number;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        slug: string;
+        dosageForm: string | null;
+        manufacturer: string | null;
+        atcCode: string | null;
+        rxRequired: boolean;
+        active: boolean;
+    }) | null>;
+    analogs(name: string): Promise<{
+        drug: string;
+        analogs: {
+            id: number;
+            name: string;
+            substances: string[];
+            confidence: number | null;
+            reason: string | null;
+        }[];
+    } | {
         drug: string | null;
         analogs: string[];
-    };
+    }>;
     interactions(body: {
         items: string[];
-    }): {
-        a: string;
-        b: string;
-        risk: string;
-        note: string;
-    }[];
+    }): Promise<any[]>;
     contra(body: {
         drug: string;
         age: number;
         context: string;
-    }): {
-        drug: null;
-        warnings: string[];
-        source?: undefined;
-    } | {
+    }): Promise<{
         drug: string;
         warnings: string[];
         source: string;
-    };
+    } | {
+        drug: null;
+        warnings: string[];
+        source?: undefined;
+    }>;
 }

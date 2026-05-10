@@ -1,27 +1,52 @@
 from pathlib import Path
 import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[1]
 processed = ROOT / 'data/processed'
+
 d = pd.read_csv(processed / 'drugs.csv')
 i = pd.read_csv(processed / 'indications.csv')
 c = pd.read_csv(processed / 'contraindications.csv')
 s = pd.read_csv(processed / 'synonyms.csv')
 inter = pd.read_csv(processed / 'interactions.csv')
+
 lines = ["MATCH (n) DETACH DELETE n;"]
+
 for _, r in d.iterrows():
-    lines.append(f"MERGE (drug:Drug {{drugId:{int(r['drug_id'])}, name:'{r['trade_name']}', atc:'{r['atc']}', slug:'{r['slug']}'}})")
-    lines.append(f"MERGE (sub:Substance {{name:'{r['substance']}'}})")
-    lines.append(f"MERGE (grp:Group {{name:'{r['group']}'}})")
-    lines.append(f"MERGE (drug)-[:CONTAINS]->(sub)")
-    lines.append(f"MERGE (drug)-[:BELONGS_TO]->(grp)")
+    name = str(r['trade_name']).replace("'", "\\'")
+    sub  = str(r['substance']).replace("'", "\\'")
+    grp  = str(r['group']).replace("'", "\\'")
+    atc  = str(r['atc'])
+    slug = str(r['slug'])
+    did  = int(r['drug_id'])
+    lines.append(f"MERGE (d{did}:Drug {{drugId:{did}, name:'{name}', atc:'{atc}', slug:'{slug}'}});")
+    lines.append(f"MERGE (sub{did}:Substance {{name:'{sub}'}});")
+    lines.append(f"MERGE (grp{did}:Group {{name:'{grp}'}});")
+    lines.append(f"MATCH (d{did}:Drug {{drugId:{did}}}), (sub{did}:Substance {{name:'{sub}'}}) MERGE (d{did})-[:CONTAINS]->(sub{did});")
+    lines.append(f"MATCH (d{did}:Drug {{drugId:{did}}}), (grp{did}:Group {{name:'{grp}'}}) MERGE (d{did})-[:BELONGS_TO]->(grp{did});")
+
 for _, r in i.iterrows():
-    lines.append(f"MATCH (drug:Drug {{drugId:{int(r['drug_id'])}}}) MERGE (ind:Indication {{name:'{r['indication']}'}}) MERGE (drug)-[:INDICATED_FOR]->(ind)")
+    ind = str(r['indication']).replace("'", "\\'")
+    did = int(r['drug_id'])
+    lines.append(f"MATCH (d:Drug {{drugId:{did}}}) MERGE (ind:Indication {{name:'{ind}'}}) MERGE (d)-[:INDICATED_FOR]->(ind);")
+
 for _, r in c.iterrows():
-    lines.append(f"MATCH (drug:Drug {{drugId:{int(r['drug_id'])}}}) MERGE (con:Contraindication {{name:'{r['contraindication']}'}}) MERGE (drug)-[:HAS_CONTRAINDICATION]->(con)")
+    con = str(r['contraindication']).replace("'", "\\'")
+    did = int(r['drug_id'])
+    lines.append(f"MATCH (d:Drug {{drugId:{did}}}) MERGE (con:Contraindication {{name:'{con}'}}) MERGE (d)-[:HAS_CONTRAINDICATION]->(con);")
+
 for _, r in s.iterrows():
-    lines.append(f"MATCH (drug:Drug {{drugId:{int(r['drug_id'])}}}) MERGE (syn:Synonym {{name:'{r['synonym']}'}}) MERGE (syn)-[:REFERS_TO]->(drug)")
+    syn = str(r['synonym']).replace("'", "\\'")
+    did = int(r['drug_id'])
+    lines.append(f"MATCH (d:Drug {{drugId:{did}}}) MERGE (syn:Synonym {{name:'{syn}'}}) MERGE (syn)-[:REFERS_TO]->(d);")
+
 for _, r in inter.iterrows():
-    lines.append(f"MATCH (drug:Drug {{drugId:{int(r['drug_id'])}}}), (other:Drug {{name:'{r['with_name']}'}}) MERGE (drug)-[:INTERACTS_WITH {{risk:'{r['risk_level']}', note:'{r['note']}'}}]->(other)")
+    did  = int(r['drug_id'])
+    with_name = str(r['with_name']).replace("'", "\\'")
+    risk = str(r['risk_level'])
+    note = str(r['note']).replace("'", "\\'")
+    lines.append(f"MATCH (d:Drug {{drugId:{did}}}), (other:Drug {{name:'{with_name}'}}) MERGE (d)-[:INTERACTS_WITH {{risk:'{risk}', note:'{note}'}}]->(other);")
+
 out = ROOT / 'output/neo4j_seed.cypher'
 out.write_text('\n'.join(lines), encoding='utf-8')
 print('Cypher ready')

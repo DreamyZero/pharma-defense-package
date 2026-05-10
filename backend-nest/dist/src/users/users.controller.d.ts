@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
-    me(req: any): import(".prisma/client").Prisma.Prisma__UserClient<{
+    me(req: any): Promise<{
         id: number;
         email: string;
         fullName: string;
@@ -11,13 +11,13 @@ export declare class UsersController {
         organization: string | null;
         verified: boolean;
         createdAt: Date;
-    } | null, null, import("@prisma/client/runtime/library").DefaultArgs, import(".prisma/client").Prisma.PrismaClientOptions>;
-    update(req: any, dto: UpdateUserDto): import(".prisma/client").Prisma.Prisma__UserClient<{
+    }>;
+    update(req: any, dto: UpdateUserDto): Promise<{
         id: number;
         email: string;
         fullName: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs, import(".prisma/client").Prisma.PrismaClientOptions>;
+    }>;
 }

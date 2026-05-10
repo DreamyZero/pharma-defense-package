@@ -1,12 +1,13 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import neo4j from 'neo4j-driver';
-import { NEO4J_DRIVER } from './neo4j.module';
+import neo4j, { Driver, Session, Record as Neo4jRecord } from 'neo4j-driver';
+
+export const NEO4J_DRIVER = 'NEO4J_DRIVER'; // ← перенеси сюда
 
 @Injectable()
 export class Neo4jService implements OnModuleDestroy {
-  constructor(@Inject(NEO4J_DRIVER) private readonly driver: neo4j.Driver) {}
+  constructor(@Inject(NEO4J_DRIVER) private readonly driver: Driver) {}
 
-  getSession(): neo4j.Session {
+  getSession(): Session {
     return this.driver.session();
   }
 
@@ -14,7 +15,7 @@ export class Neo4jService implements OnModuleDestroy {
     const session = this.getSession();
     try {
       const result = await session.run(cypher, params);
-      return result.records.map((r: neo4j.Record) => r.toObject() as Record<string, unknown>);
+      return result.records.map((r: Neo4jRecord) => r.toObject() as Record<string, unknown>);
     } finally {
       await session.close();
     }

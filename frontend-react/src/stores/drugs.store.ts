@@ -37,12 +37,18 @@ export interface ContraResult {
 }
 
 const FALLBACK_DRUGS: DrugResult[] = [
-  { id: 1, name: 'Аспирин', slug: 'aspirin', atcCode: 'N02BA01', manufacturer: 'Bayer', pharmacologicalGroup: 'НПВП', substances: [{ substance: { name: 'Ацетилсалициловая кислота', canonicalName: 'Acetylsalicylic acid' } }] },
-  { id: 2, name: 'Метформин', slug: 'metformin', atcCode: 'A10BA02', manufacturer: 'Teva', pharmacologicalGroup: 'Бигуаниды', substances: [{ substance: { name: 'Метформина гидрохлорид', canonicalName: 'Metformin' } }] },
-  { id: 3, name: 'Лизиноприл', slug: 'lisinopril', atcCode: 'C09AA03', manufacturer: 'Stada', pharmacologicalGroup: 'Ингибиторы АПФ', substances: [{ substance: { name: 'Лизиноприл', canonicalName: 'Lisinopril' } }] },
-  { id: 4, name: 'Амлодипин', slug: 'amlodipine', atcCode: 'C08CA01', manufacturer: 'Pfizer', pharmacologicalGroup: 'БКК', substances: [{ substance: { name: 'Амлодипина безилат', canonicalName: 'Amlodipine' } }] },
-  { id: 5, name: 'Омепразол', slug: 'omeprazole', atcCode: 'A02BC01', manufacturer: 'AstraZeneca', pharmacologicalGroup: 'ИПП', substances: [{ substance: { name: 'Омепразол', canonicalName: 'Omeprazole' } }] },
+  { id: 1, name: 'Аспирин', slug: 'aspirin', atcCode: 'N02BA01', manufacturer: 'Bayer', pharmacologicalGroup: 'НПВП', substances: [{ substance: { name: 'Ацетилсалициловая кислота' } }] },
+  { id: 2, name: 'Метформин', slug: 'metformin', atcCode: 'A10BA02', manufacturer: 'Teva', pharmacologicalGroup: 'Бигуаниды', substances: [{ substance: { name: 'Метформина гидрохлорид' } }] },
+  { id: 3, name: 'Лизиноприл', slug: 'lisinopril', atcCode: 'C09AA03', manufacturer: 'Stada', pharmacologicalGroup: 'Ингибиторы АПФ', substances: [{ substance: { name: 'Лизиноприл' } }] },
+  { id: 4, name: 'Амлодипин', slug: 'amlodipine', atcCode: 'C08CA01', manufacturer: 'Pfizer', pharmacologicalGroup: 'БКК', substances: [{ substance: { name: 'Амлодипина безилат' } }] },
+  { id: 5, name: 'Омепразол', slug: 'omeprazole', atcCode: 'A02BC01', manufacturer: 'AstraZeneca', pharmacologicalGroup: 'ИПП', substances: [{ substance: { name: 'Омепразол' } }] },
 ];
+
+// Normalize confidence: backend stores 0.0–1.0, UI shows 0–100
+function normalizeConfidence(c: number): number {
+  if (c === null || c === undefined) return 0;
+  return c <= 1 ? Math.round(c * 100) : Math.round(c);
+}
 
 class DrugsStore {
   results: DrugResult[] = [];
@@ -66,9 +72,15 @@ class DrugsStore {
     this.error = null;
     try {
       const { data } = await api.get('/drugs/search', { params: { q } });
-      runInAction(() => { this.results = Array.isArray(data) && data.length > 0 ? data : FALLBACK_DRUGS.filter(d => d.name.toLowerCase().includes(q.toLowerCase())); });
+      runInAction(() => {
+        this.results = Array.isArray(data) && data.length > 0
+          ? data
+          : FALLBACK_DRUGS.filter(d => d.name.toLowerCase().includes(q.toLowerCase()));
+      });
     } catch {
-      runInAction(() => { this.results = FALLBACK_DRUGS.filter(d => d.name.toLowerCase().includes(q.toLowerCase())); });
+      runInAction(() => {
+        this.results = FALLBACK_DRUGS.filter(d => d.name.toLowerCase().includes(q.toLowerCase()));
+      });
     } finally {
       runInAction(() => { this.isLoading = false; });
     }
@@ -83,7 +95,10 @@ class DrugsStore {
       runInAction(() => { this.selectedDrug = data; });
     } catch {
       const fallback = FALLBACK_DRUGS.find(d => d.slug === slug);
-      runInAction(() => { this.selectedDrug = fallback || null; this.error = !fallback ? 'Препарат не найден' : null; });
+      runInAction(() => {
+        this.selectedDrug = fallback || null;
+        this.error = !fallback ? 'Препарат не найден' : null;
+      });
     } finally {
       runInAction(() => { this.isLoading = false; });
     }
@@ -95,11 +110,27 @@ class DrugsStore {
 
   async fetchAnalogs(name: string) {
     this.isLoading = true;
+    this.analogs = null;
     try {
       const { data } = await api.get(`/analogs/${encodeURIComponent(name)}`);
-      runInAction(() => { this.analogs = data; });
+      runInAction(() => {
+        this.analogs = {
+          drug: data.drug,
+          analogs: (data.analogs || []).map((a: any) => ({
+            ...a,
+            confidence: normalizeConfidence(a.confidence),
+          })),
+        };
+      });
     } catch {
-      runInAction(() => { this.analogs = { drug: name, analogs: [{ id: 2, name: 'Метформин', substances: ['Метформина гидрохлорид'], confidence: 1.0, reason: 'Одно действующее вещество' }] }; });
+      runInAction(() => {
+        this.analogs = {
+          drug: name,
+          analogs: [
+            { id: 2, name: 'Метформин', substances: ['Метформина гидрохлорид'], confidence: 100, reason: 'Одно действующее вещество' },
+          ],
+        };
+      });
     } finally {
       runInAction(() => { this.isLoading = false; });
     }
@@ -128,7 +159,9 @@ class DrugsStore {
       const { data } = await api.post('/contra/check', { drug, age, context });
       runInAction(() => { this.contraResult = data; });
     } catch {
-      runInAction(() => { this.contraResult = { drug, warnings: ['Данные о противопоказаниях недоступны (демо-режим)'] }; });
+      runInAction(() => {
+        this.contraResult = { drug, warnings: ['Данные о противопоказаниях недоступны (демо-режим)'] };
+      });
     } finally {
       runInAction(() => { this.isLoading = false; });
     }

@@ -7,7 +7,7 @@ export const AnalogsPage = observer(() => {
 
   const search = (e: React.FormEvent) => {
     e.preventDefault();
-    drugsStore.fetchAnalogs(name);
+    if (name.trim()) drugsStore.fetchAnalogs(name.trim());
   };
 
   return (
@@ -20,29 +20,39 @@ export const AnalogsPage = observer(() => {
           placeholder="Торговое название или МНН..."
           value={name}
           onChange={e => setName(e.target.value)}
+          id="analogs-search"
+          name="analogs-search"
         />
         <button className="btn-primary" type="submit" disabled={drugsStore.isLoading}>
           {drugsStore.isLoading ? 'Поиск...' : 'Найти аналоги'}
         </button>
       </form>
-      {drugsStore.analogs && (
+
+      {drugsStore.isLoading && <div className="loading-state">Поиск аналогов...</div>}
+
+      {!drugsStore.isLoading && drugsStore.analogs && (
         <div>
           <h2 className="section-title">Аналоги для: {drugsStore.analogs.drug}</h2>
-          {!drugsStore.analogs.analogs || drugsStore.analogs.analogs.length === 0
-            ? <div className="empty-state">Аналоги не найдены</div>
-            : <div className="results-grid">
-                {drugsStore.analogs.analogs.map((a: any, i: number) => (
-                  <div key={a.id || i} className="drug-card">
-                    <div className="drug-card__name">{a.name}</div>
-                    {a.substances && a.substances.length > 0 && (
-                      <div className="drug-card__substances">{a.substances.join(', ')}</div>
+          {!drugsStore.analogs.analogs || drugsStore.analogs.analogs.length === 0 ? (
+            <div className="empty-state">Аналоги не найдены</div>
+          ) : (
+            <div className="results-grid">
+              {drugsStore.analogs.analogs.map((a: any, i: number) => (
+                <div key={a.id ?? i} className="analog-card">
+                  <div className="analog-card__name">{a.name}</div>
+                  {a.substances && a.substances.length > 0 && (
+                    <div className="analog-card__substances">{a.substances.join(', ')}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {a.confidence != null && (
+                      <span className="analog-card__confidence">Совпадение: {a.confidence}%</span>
                     )}
-                    {a.confidence != null && <div className="text-muted" style={{ marginTop: 'var(--sp-2)' }}>Совпадение: {a.confidence}%</div>}
-                    {a.reason && <div className="text-muted">{a.reason}</div>}
+                    {a.reason && <span className="text-muted">{a.reason}</span>}
                   </div>
-                ))}
-              </div>
-          }
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

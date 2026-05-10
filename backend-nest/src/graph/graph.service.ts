@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Driver } from 'neo4j-driver';
+import neo4j from 'neo4j-driver';
 import { NEO4J_DRIVER } from './neo4j/neo4j.module';
 
 export interface GraphNode {
@@ -18,19 +18,18 @@ export interface GraphEdge {
 
 @Injectable()
 export class GraphService {
-  constructor(@Inject(NEO4J_DRIVER) private readonly driver: Driver) {}
+  constructor(@Inject(NEO4J_DRIVER) private readonly driver: neo4j.Driver) {}
 
-  private async run(cypher: string, params: Record<string, any> = {}) {
+  private async run(cypher: string, params: Record<string, unknown> = {}): Promise<Record<string, unknown>[]> {
     const session = this.driver.session();
     try {
       const result = await session.run(cypher, params);
-      return result.records.map((r) => r.toObject());
+      return result.records.map((r: neo4j.Record) => r.toObject() as Record<string, unknown>);
     } finally {
       await session.close();
     }
   }
 
-  /** Полный граф: препараты, вещества, группы, взаимодействия */
   async getFullGraph(limit = 60): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
     const cypher = `
       MATCH (d:Drug)-[r1:CONTAINS]->(s:Substance)
@@ -43,7 +42,6 @@ export class GraphService {
     return this.mapToGraph(records);
   }
 
-  /** Граф для конкретного препарата (соседи 1-го и 2-го порядка) */
   async getDrugGraph(drugId: string): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
     const cypher = `
       MATCH (d:Drug {id: $drugId})
@@ -58,7 +56,6 @@ export class GraphService {
     return this.mapToGraph(records, drugId);
   }
 
-  /** Граф взаимодействий для списка препаратов */
   async getInteractionGraph(drugNames: string[]): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
     const cypher = `
       MATCH (d:Drug)
@@ -73,7 +70,7 @@ export class GraphService {
   }
 
   private mapToGraph(
-    records: any[],
+    records: Record<string, unknown>[],
     highlightId?: string,
   ): { nodes: GraphNode[]; edges: GraphEdge[] } {
     const nodesMap = new Map<string, GraphNode>();
@@ -96,13 +93,13 @@ export class GraphService {
     };
 
     for (const rec of records) {
-      const d = rec.d?.properties;
-      const s = rec.s?.properties;
-      const d2 = rec.d2?.properties;
-      const g = rec.g?.properties;
-      const ind = rec.ind?.properties;
-      const cont = rec.cont?.properties;
-      const iw = rec.iw?.properties;
+      const d = (rec['d'] as any)?.properties;
+      const s = (rec['s'] as any)?.properties;
+      const d2 = (rec['d2'] as any)?.properties;
+      const g = (rec['g'] as any)?.properties;
+      const ind = (rec['ind'] as any)?.properties;
+      const cont = (rec['cont'] as any)?.properties;
+      const iw = (rec['iw'] as any)?.properties;
 
       if (d?.id) addNode(d.id, d.name || d.id, 'Drug', { atcCode: d.atcCode });
       if (s?.id) {

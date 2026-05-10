@@ -11,14 +11,13 @@ import { AnalogsPage } from './pages/Analogs/AnalogsPage';
 import { ContraPage } from './pages/Contra/ContraPage';
 import { ProfilePage } from './pages/Profile/ProfilePage';
 import { AdminPage } from './pages/Admin/AdminPage';
-import { GraphPage } from './pages/GraphPage/GraphPage';
+import GraphPage from './pages/GraphPage/GraphPage';
 import { ForbiddenPage } from './pages/Forbidden';
 import './styles/variables.css';
 import './styles/base.css';
 import './styles/layout.css';
 import './styles/pages.css';
 
-// Охранник — только для авторизованных
 const RequireAuth = observer(({ children }: { children: JSX.Element }) => {
   if (!authStore.isAuthenticated) return <Navigate to="/login" replace />;
   return children;
@@ -37,7 +36,6 @@ const AppShell = observer(() => {
 
   return (
     <div className="app-shell">
-      {/* Header */}
       <header className="app-header">
         <a href="/search" className="app-header__logo">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="PharmaBase">
@@ -66,7 +64,6 @@ const AppShell = observer(() => {
       </header>
 
       <div className="app-body">
-        {/* Sidebar */}
         <aside className="app-sidebar">
           <div className="sidebar-section">
             <div className="sidebar-label">Функции</div>
@@ -85,7 +82,6 @@ const AppShell = observer(() => {
           </div>
         </aside>
 
-        {/* Main content */}
         <main className="app-main">
           <Routes>
             <Route path="/" element={<Navigate to="/search" replace />} />

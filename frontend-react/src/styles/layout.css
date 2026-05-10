@@ -1,14 +1,12 @@
 /* ─── App shell ───────────────────────────────────────────────────── */
 .app-shell {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
-  grid-template-rows: var(--header-h) 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 100dvh;
 }
 
 /* ─── Header ──────────────────────────────────────────────────────── */
 .app-header {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -20,6 +18,7 @@
   top: 0;
   z-index: 100;
   height: var(--header-h);
+  flex-shrink: 0;
 }
 
 .app-header__logo {
@@ -48,6 +47,15 @@
   gap: var(--sp-2);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+
+/* ─── Body (sidebar + main) ───────────────────────────────────────── */
+.app-body {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  flex: 1;
+  min-height: 0;
+  height: calc(100dvh - var(--header-h));
 }
 
 /* ─── Sidebar ─────────────────────────────────────────────────────── */
@@ -116,9 +124,8 @@
 }
 
 @media (max-width: 768px) {
-  .app-shell {
+  .app-body {
     grid-template-columns: 1fr;
-    grid-template-rows: var(--header-h) 1fr;
   }
   .app-sidebar { display: none; }
   .app-main { padding: var(--sp-4); }

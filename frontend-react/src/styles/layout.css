@@ -31,9 +31,7 @@
   text-decoration: none;
 }
 
-.app-header__logo svg {
-  flex-shrink: 0;
-}
+.app-header__logo svg { flex-shrink: 0; }
 
 .app-header__right {
   display: flex;
@@ -69,9 +67,7 @@
   height: calc(100dvh - var(--header-h));
 }
 
-.sidebar-section {
-  margin-bottom: var(--sp-6);
-}
+.sidebar-section { margin-bottom: var(--sp-6); }
 
 .sidebar-label {
   font-size: var(--text-xs);
@@ -118,15 +114,12 @@
 .app-main {
   padding: var(--sp-8);
   overflow-y: auto;
-  max-width: var(--content-max);
-  width: 100%;
-  justify-self: start;
+  /* no max-width here — let the grid column handle width */
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
-  .app-body {
-    grid-template-columns: 1fr;
-  }
+  .app-body { grid-template-columns: 1fr; }
   .app-sidebar { display: none; }
   .app-main { padding: var(--sp-4); }
 }

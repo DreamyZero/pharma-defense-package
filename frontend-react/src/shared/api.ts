@@ -33,7 +33,7 @@ export function clearSession(): void {
 
 // ─── Axios instance ─────────────────────────────────────────────────────────
 
-export const API_BASE = 'http://localhost:3000';
+export const API_BASE = 'http://localhost:3001';
 
 export const api = axios.create({ baseURL: API_BASE });
 

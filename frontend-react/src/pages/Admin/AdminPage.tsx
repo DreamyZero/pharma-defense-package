@@ -1,20 +1,55 @@
 import { useEffect, useState } from 'react';
 import { fetchImports, runImport, type ImportJob } from '../../entities/imports/api';
 import { fetchAudit, type AuditRow } from '../../entities/audit/api';
+import { api } from '../../shared/api';
+
 const card:React.CSSProperties={background:'#fff',border:'1px solid #e5e7eb',borderRadius:20,padding:20,boxShadow:'0 10px 30px rgba(15,23,42,.06)'};
 const badge=(status:string):React.CSSProperties=>({display:'inline-flex',padding:'6px 10px',borderRadius:999,color:status==='completed'?'#166534':status==='running'?'#92400e':'#991b1b',background:status==='completed'?'#dcfce7':status==='running'?'#fef3c7':'#fee2e2',fontWeight:700,fontSize:12});
+
+type DashboardStats = {
+  drugsCount?: number;
+  substancesCount?: number;
+  synonymsCount?: number;
+  interactionsCount?: number;
+  highInteractionsCount?: number;
+  grlsCoverage?: number;
+  updatedAt?: string;
+};
+
 export function AdminPage(){
-  const [imports,setImports]=useState<ImportJob[]>([]); const [audit,setAudit]=useState<AuditRow[]>([]); const [loading,setLoading]=useState(true); const [source,setSource]=useState('manual_demo_job'); const [message,setMessage]=useState('');
-  useEffect(()=>{ Promise.all([fetchImports(),fetchAudit()]).then(([i,a])=>{ setImports(i); setAudit(a); setLoading(false); }); },[]);
+  const [imports,setImports]=useState<ImportJob[]>([]);
+  const [audit,setAudit]=useState<AuditRow[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [source,setSource]=useState('manual_demo_job');
+  const [message,setMessage]=useState('');
+  const [stats,setStats]=useState<DashboardStats>({});
+  const [statsError,setStatsError]=useState(false);
+
+  useEffect(()=>{
+    Promise.all([
+      fetchImports(),
+      fetchAudit(),
+      api.get('/dashboard').then(r=>r.data).catch(()=>null)
+    ]).then(([i,a,d])=>{
+      setImports(i);
+      setAudit(a);
+      if(d){ setStats(d); } else { setStatsError(true); }
+      setLoading(false);
+    });
+  },[]);
+
   const handleRun=async()=>{ const res=await runImport(source); setMessage(res.message); setImports(prev=>[res.job,...prev]); };
+
+  const kpiCards=[
+    ['Препаратов в базе', stats.drugsCount!=null?stats.drugsCount.toLocaleString('ru'):'—', statsError?'Нет данных':loading?'Загрузка...':''],
+    ['Действующих веществ', stats.substancesCount!=null?stats.substancesCount.toLocaleString('ru'):'—', stats.synonymsCount!=null?`Синонимов: ${stats.synonymsCount.toLocaleString('ru')}`:statsError?'Нет данных':loading?'Загрузка...':''],
+    ['Взаимодействий в графе', stats.interactionsCount!=null?stats.interactionsCount.toLocaleString('ru'):'—', stats.highInteractionsCount!=null?`HIGH: ${stats.highInteractionsCount.toLocaleString('ru')}`:statsError?'Нет данных':loading?'Загрузка...':''],
+    ['Покрытие ГРЛС', stats.grlsCoverage!=null?`${stats.grlsCoverage}%`:'—', stats.updatedAt?`Обновлено: ${stats.updatedAt}`:statsError?'Нет данных':loading?'Загрузка...':''],
+  ];
+
   return <div style={{display:'grid',gap:20}}>
     <section style={{display:'grid',gridTemplateColumns:'repeat(4, minmax(0,1fr))',gap:16}}>
-      {[
-        ['Препаратов в базе','14 283','+247 за месяц'],
-        ['Действующих веществ','3 841','Синонимов: 9 124'],
-        ['Взаимодействий в графе','28 654','HIGH: 4 201'],
-        ['Покрытие ГРЛС','98%','Обновлено: 01.05.2025']
-      ].map(([title,value,note])=><div key={title} style={card}><div style={{color:'#6b7280',fontSize:14,marginBottom:10}}>{title}</div><div style={{fontSize:34,fontWeight:800,marginBottom:8}}>{value}</div><div style={{color:'#059669',fontSize:14}}>{note}</div></div>)}
+      {kpiCards.map(([title,value,note])=><div key={title} style={card}><div style={{color:'#6b7280',fontSize:14,marginBottom:10}}>{title}</div><div style={{fontSize:34,fontWeight:800,marginBottom:8}}>{value}</div><div style={{color:'#059669',fontSize:14}}>{note}</div></div>)}
     </section>
     <section style={{display:'grid',gridTemplateColumns:'1.2fr .8fr',gap:20}}>
       <div style={card}>
@@ -26,7 +61,7 @@ export function AdminPage(){
       <div style={{...card,display:'grid',gap:16,alignContent:'start'}}>
         <div><h2 style={{margin:'0 0 8px'}}>Последние запросы</h2><div style={{color:'#6b7280'}}>Данные в стилистике референса</div></div>
         {['Аспирин','Метформин','Лизиноприл'].map((x,i)=><div key={x} style={{padding:14,border:'1px solid #e5e7eb',borderRadius:16}}><div style={{fontWeight:700}}>{x}</div><div style={{color:'#6b7280'}}>{['Ацетилсалициловая кислота · C01EB02','Метформина гидрохлорид · A10BA02','Лизиноприл · C09AA03'][i]}</div></div>)}
-        <div style={{padding:16,borderRadius:16,background:'#eff6ff',color:'#1d4ed8'}}>{loading?'Загрузка данных...':'Демо-режим поддерживает fallback при недоступном backend API.'}</div>
+        {statsError && <div style={{padding:16,borderRadius:16,background:'#fef2f2',color:'#991b1b'}}>Не удалось загрузить данные с backend API. Проверьте подключение.</div>}
       </div>
     </section>
     <section style={card}>

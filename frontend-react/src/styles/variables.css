@@ -4,6 +4,7 @@
   --color-surface:         #ffffff;
   --color-surface-2:       #f8fafc;
   --color-surface-offset:  #e8edf2;
+  --color-surface-dynamic: #dde5ed;
   --color-divider:         #dde3ea;
   --color-border:          #cdd4dc;
 
@@ -17,7 +18,7 @@
   --color-primary-hover:   #085f56;
   --color-primary-active:  #054540;
   --color-primary-light:   #e0f2ef;
-  --color-primary-ring:    rgba(13,122,110,.25);
+  --color-primary-ring:    rgba(13,122,110,.22);
 
   /* Semantic */
   --color-danger:          #c0392b;
@@ -65,14 +66,53 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 3px rgba(15,25,35,.08), 0 1px 2px rgba(15,25,35,.05);
+  --shadow-sm: 0 1px 3px rgba(15,25,35,.07), 0 1px 2px rgba(15,25,35,.04);
   --shadow-md: 0 4px 12px rgba(15,25,35,.10), 0 2px 4px rgba(15,25,35,.06);
   --shadow-lg: 0 12px 32px rgba(15,25,35,.13), 0 4px 8px rgba(15,25,35,.07);
 
   --transition: 160ms cubic-bezier(.16,1,.3,1);
 
   /* ─── Layout ─────────────────────────────────────────────────────── */
-  --sidebar-w: 240px;
+  --sidebar-w: 248px;
   --header-h:  60px;
   --content-max: 1100px;
+}
+
+/* ─── Dark Mode ──────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg:              #0f1923;
+  --color-surface:         #151f2a;
+  --color-surface-2:       #1a2635;
+  --color-surface-offset:  #1e2d3d;
+  --color-surface-dynamic: #243347;
+  --color-divider:         #1e2d3d;
+  --color-border:          #2a3a4d;
+
+  --color-text:            #e2e8f0;
+  --color-text-muted:      #7a9ab5;
+  --color-text-faint:      #4a6480;
+  --color-text-inverse:    #0f1923;
+
+  --color-primary:         #14a896;
+  --color-primary-hover:   #0d8a7a;
+  --color-primary-active:  #0a6a5e;
+  --color-primary-light:   #0d3530;
+  --color-primary-ring:    rgba(20,168,150,.25);
+
+  --color-danger:          #ef5350;
+  --color-danger-light:    #2c1515;
+  --color-warning:         #f59e0b;
+  --color-warning-light:   #2c200a;
+  --color-success:         #10b981;
+  --color-success-light:   #0a2419;
+  --color-info:            #60a5fa;
+  --color-info-light:      #0f1e35;
+
+  --color-high:    #ef5350;
+  --color-medium:  #f59e0b;
+  --color-low:     #10b981;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.3);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.4);
 }

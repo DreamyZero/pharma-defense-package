@@ -8,12 +8,12 @@ export interface DrugResult {
   atcCode: string;
   manufacturer?: string;
   pharmacologicalGroup?: string;
+  dosageForm?: string;
   substances?: Array<{ substance: { name: string; canonicalName?: string } }>;
 }
 
 export interface DrugDetail extends DrugResult {
   description?: string;
-  dosageForm?: string;
   dispensingRule?: string;
   contraindications?: Array<{ condition: string; note?: string }>;
   analogsFrom?: Array<{ targetDrug: { name: string; id: number }; confidence: number; reason?: string }>;
@@ -36,7 +36,7 @@ export interface ContraResult {
   source?: string;
 }
 
-// ── Локальный каталог (fallback когда бэкенд недоступен) ────────────────────
+// ── Локальный каталог (fallback когда бэкенд недоступен) ───────────────────────────────────────
 interface LocalDrug {
   id: number; name: string; slug: string; substance: string;
   atc: string; group: string;
@@ -145,7 +145,7 @@ function normalizeConfidence(c: number): number {
   return c <= 1 ? Math.round(c * 100) : Math.round(c);
 }
 
-// ── Store ───────────────────────────────────────────────────────────────────
+// ── Store ───────────────────────────────────────────────────────────────────────────────────────
 class DrugsStore {
   results: DrugResult[] = [];
   selectedDrug: DrugDetail | null = null;
@@ -159,7 +159,7 @@ class DrugsStore {
 
   constructor() { makeAutoObservable(this); }
 
-  // ── search ────────────────────────────────────────────────────────────────
+  // ── search ────────────────────────────────────────────────────────────────────────────────
   async searchDrugs(q: string) {
     this.searchQuery = q;
     if (!q || q.length < 2) { runInAction(() => { this.results = []; }); return; }
@@ -175,6 +175,7 @@ class DrugsStore {
           id: d.id, name: d.name, slug: d.slug,
           atcCode: d.atc, manufacturer: '',
           pharmacologicalGroup: d.group,
+          dosageForm: 'Таблетки',
           substances: [{ substance: { name: d.substance } }],
         }));
     try {
@@ -189,7 +190,7 @@ class DrugsStore {
     }
   }
 
-  // ── detail ────────────────────────────────────────────────────────────────
+  // ── detail ───────────────────────────────────────────────────────────────────────────────
   async fetchDrugDetail(slug: string) {
     this.isLoading = true;
     this.selectedDrug = null;
@@ -197,7 +198,6 @@ class DrugsStore {
     try {
       const { data } = await api.get(`/drugs/${slug}`);
       if (data) {
-        // Enrich empty fields from local data
         const loc = localByName(data.name) || localBySlug(slug);
         runInAction(() => {
           this.selectedDrug = {
@@ -220,7 +220,6 @@ class DrugsStore {
         return;
       }
     } catch { /* fall through to local */ }
-    // Full local fallback – try slug then name
     const loc = localBySlug(slug) || localByName(slug);
     runInAction(() => {
       this.selectedDrug = loc ? localToDetail(loc) : null;
@@ -231,7 +230,7 @@ class DrugsStore {
 
   clearSelectedDrug() { this.selectedDrug = null; }
 
-  // ── analogs ───────────────────────────────────────────────────────────────
+  // ── analogs ─────────────────────────────────────────────────────────────────────────────
   async fetchAnalogs(name: string) {
     this.isLoading = true;
     this.analogs = null;
@@ -265,7 +264,7 @@ class DrugsStore {
     }
   }
 
-  // ── interactions ──────────────────────────────────────────────────────────
+  // ── interactions ──────────────────────────────────────────────────────────────────────────
   async checkInteractions(items: string[]) {
     this.isLoading = true;
     this.error = null;
@@ -298,7 +297,7 @@ class DrugsStore {
     }
   }
 
-  // ── contra ────────────────────────────────────────────────────────────────
+  // ── contra ──────────────────────────────────────────────────────────────────────────────
   async checkContra(drug: string, age: number, context: string) {
     this.isLoading = true;
     try {

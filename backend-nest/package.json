@@ -5,7 +5,8 @@
   "scripts": {
     "start:dev": "nest start --watch",
     "build": "nest build",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "test": "jest"  
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
@@ -29,10 +30,14 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.2.3",
+    "@nestjs/testing": "^10.4.22",
     "@types/express": "^5.0.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.9.0",
     "@types/passport-jwt": "^4.0.1",
+    "jest": "^30.4.2",
     "prisma": "^6.7.0",
+    "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3"

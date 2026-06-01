@@ -31,8 +31,6 @@ export function clearSession(): void {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
-// ─── Axios instance ─────────────────────────────────────────────────────────
-
 export const API_BASE = 'http://localhost:3001';
 
 export const api = axios.create({ baseURL: API_BASE });
@@ -44,8 +42,6 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type Drug = {
   id: number;
@@ -69,9 +65,6 @@ export type PageKey =
   | 'graph'
   | 'api';
 
-// ─── AuthGate helper ─────────────────────────────────────────────────────────
-// Used by pages to check role before rendering.
-// Returns true if the current session has one of the required roles.
 export function AuthGate(requiredRoles: string[]): boolean {
   const session = getSession();
   if (!session?.token) return false;

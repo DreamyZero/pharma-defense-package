@@ -18,12 +18,12 @@ export declare class AuthService {
     }>;
     profile(userId: number): Promise<{
         id: number;
-        email: string;
+        createdAt: Date;
         fullName: string;
+        email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     } | null>;
     private sign;
 }

@@ -5,8 +5,8 @@ export declare class AuditController {
     list(): Promise<({
         user: {
             id: number;
-            email: string;
             fullName: string;
+            email: string;
         } | null;
     } & {
         id: number;

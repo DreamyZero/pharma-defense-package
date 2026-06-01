@@ -5,8 +5,8 @@ export declare class AuditService {
     list(take?: number): Promise<({
         user: {
             id: number;
-            email: string;
             fullName: string;
+            email: string;
         } | null;
     } & {
         id: number;

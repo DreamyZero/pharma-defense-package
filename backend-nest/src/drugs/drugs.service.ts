@@ -5,7 +5,7 @@ import { drugs as localDrugs } from '../domain/pharma.data';
 
 @Injectable()
 export class DrugsService {
-  constructor(private repo: PharmaRepository, private prisma: PrismaService) {}
+  constructor(private repo: PharmaRepository, private prisma: PrismaService) { }
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -17,8 +17,8 @@ export class DrugsService {
     const n = name.trim().toLowerCase();
     return localDrugs.find(
       d => d.name.toLowerCase() === n ||
-           d.substance.toLowerCase() === n ||
-           (d.synonyms || []).some((s: string) => s.toLowerCase() === n),
+        d.substance.toLowerCase() === n ||
+        (d.synonyms || []).some((s: string) => s.toLowerCase() === n),
     );
   }
 
@@ -36,18 +36,18 @@ export class DrugsService {
       analogsFrom: dbDrug.analogsFrom?.length
         ? dbDrug.analogsFrom
         : (local.analogs || []).map((name: string, i: number) => ({
-            targetDrug: { id: -(i + 1), name },
-            confidence: 90,
-            reason: 'Одно действующее вещество / группа',
-          })),
+          targetDrug: { id: -(i + 1), name },
+          confidence: 90,
+          reason: 'Одно действующее вещество / группа',
+        })),
       interactionA: dbDrug.interactionA?.length
         ? dbDrug.interactionA
         : (local.interactions || []).map((ix: any) => ({
-            drugB: { name: ix.with },
-            severity: ix.risk,
-            clinicalEffect: ix.note,
-            recommendation: ix.note,
-          })),
+          drugB: { name: ix.with },
+          severity: ix.risk,
+          clinicalEffect: ix.note,
+          recommendation: ix.note,
+        })),
       interactionB: dbDrug.interactionB || [],
     };
   }
@@ -144,11 +144,13 @@ export class DrugsService {
       if (drug && drug.analogsFrom.length > 0) {
         return {
           drug: drug.name,
-          analogs: drug.analogsFrom.map(a => ({
+          analogs: drug.analogsFrom.map((a: any) => ({
             id: a.targetDrug.id,
             name: a.targetDrug.name,
-            substances: a.targetDrug.substances.map(s => s.substance.name),
-            confidence: a.confidence <= 1 ? Math.round(a.confidence * 100) : Math.round(a.confidence),
+            substances: a.targetDrug.substances.map((s: any) => s.substance.name),
+            confidence: a.confidence != null
+            ? (a.confidence <= 1 ? Math.round(a.confidence * 100) : Math.round(a.confidence))
+            : 0,
             reason: a.reason,
           })),
         };

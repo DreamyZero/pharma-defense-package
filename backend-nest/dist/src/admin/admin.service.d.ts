@@ -4,17 +4,17 @@ export declare class AdminService {
     constructor(prisma: PrismaService);
     users(): import(".prisma/client").Prisma.PrismaPromise<{
         id: number;
-        email: string;
+        createdAt: Date;
         fullName: string;
+        email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     }[]>;
     audit(): import(".prisma/client").Prisma.PrismaPromise<({
         user: {
-            email: string;
             fullName: string;
+            email: string;
         } | null;
     } & {
         id: number;

@@ -5,17 +5,17 @@ export declare class UsersService {
     constructor(prisma: PrismaService);
     me(id: number): Promise<{
         id: number;
-        email: string;
+        createdAt: Date;
         fullName: string;
+        email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     }>;
     update(id: number, dto: UpdateUserDto): Promise<{
         id: number;
-        email: string;
         fullName: string;
+        email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;

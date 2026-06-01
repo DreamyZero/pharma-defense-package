@@ -8,6 +8,7 @@ export declare class ImportsController {
         } | null;
     } & {
         id: number;
+        createdAt: Date;
         source: string;
         status: import(".prisma/client").$Enums.ImportStatus;
         recordsProcessed: number;
@@ -17,7 +18,6 @@ export declare class ImportsController {
         errorLog: string | null;
         createdBy: number | null;
         auditId: number | null;
-        createdAt: Date;
     })[]>;
     run(body: {
         source: string;
@@ -25,6 +25,7 @@ export declare class ImportsController {
         message: string;
         job: {
             id: number;
+            createdAt: Date;
             source: string;
             status: import(".prisma/client").$Enums.ImportStatus;
             recordsProcessed: number;
@@ -34,7 +35,6 @@ export declare class ImportsController {
             errorLog: string | null;
             createdBy: number | null;
             auditId: number | null;
-            createdAt: Date;
         };
     }>;
 }

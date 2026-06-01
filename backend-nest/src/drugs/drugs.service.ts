@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { PharmaRepository } from '../domain/pharma.repository';
 import { drugs as localDrugs } from '../domain/pharma.data';
 
 @Injectable()
 export class DrugsService {
+  private readonly logger = new Logger(DrugsService.name);
+
   constructor(private repo: PharmaRepository, private prisma: PrismaService) {}
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -71,7 +73,9 @@ export class DrugsService {
         take: 20,
       });
       if (drugs.length > 0) return drugs;
-    } catch { /* fall through */ }
+    } catch (err) {
+      this.logger.warn(`[search] Prisma недоступна, переключаемся на локальные данные. Причина: ${(err as Error).message}`);
+    }
     return this.repo.search(q).map(d => ({
       id: d.id,
       name: d.name,
@@ -99,7 +103,9 @@ export class DrugsService {
         const local = this.localByName(dbDrug.name);
         return this.enrichDrugDetail(dbDrug, local);
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      this.logger.warn(`[getBySlug] Prisma недоступна для slug="${slug}". Причина: ${(err as Error).message}`);
+    }
     // full fallback from local data
     const local = this.localBySlug(slug);
     if (!local) return null;
@@ -153,7 +159,9 @@ export class DrugsService {
           })),
         };
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      this.logger.warn(`[analogs] Prisma недоступна для "${name}". Причина: ${(err as Error).message}`);
+    }
     // fallback: use local data
     const local = this.localByName(name);
     if (!local) return { drug: name, analogs: [] };
@@ -195,7 +203,9 @@ export class DrugsService {
         }
         if (results.some(r => r.mechanism || r.clinicalEffect)) return results;
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      this.logger.warn(`[interactions] Prisma недоступна. Причина: ${(err as Error).message}`);
+    }
     // fallback: cross-check local interaction data
     return items.flatMap((a, i) =>
       items.slice(i + 1).map(b => {
@@ -231,7 +241,9 @@ export class DrugsService {
         }
         if (warnings.length > 0) return { drug: dbDrug.name, warnings, source: 'database' };
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      this.logger.warn(`[contra] Prisma недоступна для "${drug}". Причина: ${(err as Error).message}`);
+    }
     // fallback
     const local = this.localByName(drug);
     if (!local) return { drug: null, warnings: [] };
@@ -245,12 +257,19 @@ export class DrugsService {
       this.prisma.drug.count({ where: { active: true } }),
       this.prisma.substance.count(),
       this.prisma.drugInteraction.count(),
-    ]).catch(() => [0, 0, 0]);
+    ]).catch((err) => {
+      this.logger.warn(`[dashboard] Prisma недоступна, возвращаем fallback-метрики. Причина: ${(err as Error).message}`);
+      return [0, 0, 0];
+    });
+
+    const isFallback = drugsCount === 0 && substancesCount === 0 && interactionsCount === 0;
+
     return {
+      isFallback,
       metrics: [
-        { label: 'Препаратов в базе', value: drugsCount || '14 283', note: '+247 за месяц' },
-        { label: 'Действующих веществ', value: substancesCount || '3 841', note: 'Синонимов: 9 124' },
-        { label: 'Взаимодействий в графе', value: interactionsCount || '28 654', note: 'HIGH: 4 201' },
+        { label: 'Препаратов в базе', value: isFallback ? '14 283*' : drugsCount, note: isFallback ? '* демо-данные' : '+247 за месяц' },
+        { label: 'Действующих веществ', value: isFallback ? '3 841*' : substancesCount, note: isFallback ? '* демо-данные' : 'Синонимов: 9 124' },
+        { label: 'Взаимодействий в графе', value: isFallback ? '28 654*' : interactionsCount, note: isFallback ? '* демо-данные' : 'HIGH: 4 201' },
         { label: 'Покрытие ГРЛС', value: '98%', note: 'Обновлено: 01.05.2025' },
       ],
       recentQueries: [

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import neo4j, { Driver, Record as Neo4jRecord } from 'neo4j-driver';
 import { NEO4J_DRIVER } from './neo4j/neo4j.module';
 import { PrismaService } from '../database/prisma.service';
@@ -17,8 +17,12 @@ export interface GraphEdge {
   severity?: string;
 }
 
+const EMPTY_GRAPH = { nodes: [], edges: [] };
+
 @Injectable()
 export class GraphService {
+  private readonly logger = new Logger(GraphService.name);
+
   constructor(
     @Inject(NEO4J_DRIVER) private readonly driver: Driver,
     private readonly prisma: PrismaService,
@@ -35,45 +39,59 @@ export class GraphService {
   }
 
   async getFullGraph(limit = 60): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
-    const cypher = `
-      MATCH (d:Drug)-[r1:CONTAINS]->(s:Substance)
-      OPTIONAL MATCH (d)-[r2:INTERACTS_WITH]->(d2:Drug)
-      OPTIONAL MATCH (d)-[r3:BELONGS_TO]->(g:PharmacologicalGroup)
-      RETURN d, s, r1, d2, r2, g, r3
-      LIMIT $limit
-    `;
-    const records = await this.run(cypher, { limit: neo4j.int(limit) }); // ← фикс float
-    return this.mapToGraph(records);
+    try {
+      const cypher = `
+        MATCH (d:Drug)-[r1:CONTAINS]->(s:Substance)
+        OPTIONAL MATCH (d)-[r2:INTERACTS_WITH]->(d2:Drug)
+        OPTIONAL MATCH (d)-[r3:BELONGS_TO]->(g:PharmacologicalGroup)
+        RETURN d, s, r1, d2, r2, g, r3
+        LIMIT $limit
+      `;
+      const records = await this.run(cypher, { limit: neo4j.int(limit) });
+      return this.mapToGraph(records);
+    } catch (err) {
+      this.logger.warn(`[getFullGraph] Neo4j недоступен. Причина: ${(err as Error).message}`);
+      return EMPTY_GRAPH;
+    }
   }
 
   async getDrugGraph(drugId: string): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
-    const cypher = `
-      MATCH (d:Drug {id: $drugId})
-      OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
-      OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]->(d2:Drug)
-      OPTIONAL MATCH (d)-[:BELONGS_TO]->(g:PharmacologicalGroup)
-      OPTIONAL MATCH (d)-[:HAS_INDICATION]->(ind:Indication)
-      OPTIONAL MATCH (d)-[:HAS_CONTRAINDICATION]->(cont:Contraindication)
-      RETURN d, s, d2, iw, g, ind, cont
-    `;
-    const records = await this.run(cypher, { drugId });
-    return this.mapToGraph(records, drugId);
+    try {
+      const cypher = `
+        MATCH (d:Drug {id: $drugId})
+        OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
+        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]->(d2:Drug)
+        OPTIONAL MATCH (d)-[:BELONGS_TO]->(g:PharmacologicalGroup)
+        OPTIONAL MATCH (d)-[:HAS_INDICATION]->(ind:Indication)
+        OPTIONAL MATCH (d)-[:HAS_CONTRAINDICATION]->(cont:Contraindication)
+        RETURN d, s, d2, iw, g, ind, cont
+      `;
+      const records = await this.run(cypher, { drugId });
+      return this.mapToGraph(records, drugId);
+    } catch (err) {
+      this.logger.warn(`[getDrugGraph] Neo4j недоступен для drugId="${drugId}". Причина: ${(err as Error).message}`);
+      return EMPTY_GRAPH;
+    }
   }
 
   async getInteractionGraph(drugNames: string[]): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
-    const cypher = `
-      MATCH (d:Drug)
-      WHERE toLower(d.name) IN $names
-      OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]->(d2:Drug)
-      OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
-      RETURN d, d2, iw, s
-    `;
-    const normalized = drugNames.map((n) => n.toLowerCase().trim());
-    const records = await this.run(cypher, { names: normalized });
-    return this.mapToGraph(records);
+    try {
+      const cypher = `
+        MATCH (d:Drug)
+        WHERE toLower(d.name) IN $names
+        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]->(d2:Drug)
+        OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
+        RETURN d, d2, iw, s
+      `;
+      const normalized = drugNames.map((n) => n.toLowerCase().trim());
+      const records = await this.run(cypher, { names: normalized });
+      return this.mapToGraph(records);
+    } catch (err) {
+      this.logger.warn(`[getInteractionGraph] Neo4j недоступен. Причина: ${(err as Error).message}`);
+      return EMPTY_GRAPH;
+    }
   }
 
-  // ← добавлен новый метод
   async syncFromPostgres(): Promise<{ nodes: number; edges: number }> {
     const drugs = await this.prisma.drug.findMany({
       include: {

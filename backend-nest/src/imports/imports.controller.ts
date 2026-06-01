@@ -1,36 +1,17 @@
-import {
-  Controller,
-  Post,
-  Get,
-  UseGuards,
-  Body,
-  HttpCode,
-  Request,
-} from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Roles, RolesGuard } from '../auth/guards/roles.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { ImportsService } from './imports.service';
 
-@ApiTags('imports')
-@ApiBearerAuth()
 @Controller('imports')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}
 
+  @Get('status')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Список импортов (только ADMIN)' })
-  @Get()
-  list() {
-    return this.importsService.list();
-  }
-
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Запустить ETL импорт (только ADMIN)' })
-  @Post('run')
-  @HttpCode(200)
-  async run(@Body() body: { source: string }, @Request() req: any) {
-    return this.importsService.run(body.source, req.user?.id);
+  getStatus() {
+    return this.importsService.getEtlStatus();
   }
 }

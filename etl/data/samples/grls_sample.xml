@@ -1,13 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <grls>
   <drug>
     <name>Аспирин</name>
     <substance>Ацетилсалициловая кислота</substance>
     <atc>N02BA01</atc>
     <group>НПВС</group>
+    <registrationNumber>N012044</registrationNumber>
+    <manufacturer>Bayer AG</manufacturer>
+    <form>таблетки 500 мг</form>
+    <dosageAdult>500–1000 мг каждые 4–8 ч, макс 4 г/сут</dosageAdult>
+    <dosageChildren>10–15 мг/кг каждые 4–6 ч</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>5 лет</shelfLife>
+    <dispensingRule>otc</dispensingRule>
     <indications>
       <item>боль</item>
       <item>жар</item>
       <item>тромбоз</item>
+      <item>ревматизм</item>
     </indications>
   </drug>
   <drug>
@@ -15,9 +25,177 @@
     <substance>Метформина гидрохлорид</substance>
     <atc>A10BA02</atc>
     <group>Гипогликемические средства</group>
+    <registrationNumber>N014345</registrationNumber>
+    <manufacturer>Тева</manufacturer>
+    <form>таблетки 500 мг, 850 мг, 1000 мг</form>
+    <dosageAdult>500–2000 мг/сут в 2–3 приёма во время еды</dosageAdult>
+    <dosageChildren>10–20 мг/кг/сут с 10 лет</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
     <indications>
-      <item>диабет</item>
+      <item>сахарный диабет 2 типа</item>
       <item>гипергликемия</item>
+      <item>инсулинорезистентность</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Амоксициллин</name>
+    <substance>Амоксициллин</substance>
+    <atc>J01CA04</atc>
+    <group>Антибиотики — пенициллины</group>
+    <registrationNumber>N018234</registrationNumber>
+    <manufacturer>Sandoz</manufacturer>
+    <form>капсулы 250 мг, 500 мг</form>
+    <dosageAdult>500 мг каждые 8 ч или 875 мг каждые 12 ч</dosageAdult>
+    <dosageChildren>25–45 мг/кг/сут в 2–3 приёма</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C в сухом месте</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
+    <indications>
+      <item>бактериальные инфекции</item>
+      <item>пневмония</item>
+      <item>отит</item>
+      <item>синусит</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Омепразол</name>
+    <substance>Омепразол</substance>
+    <atc>A02BC01</atc>
+    <group>Ингибиторы протонной помпы</group>
+    <registrationNumber>N015678</registrationNumber>
+    <manufacturer>AstraZeneca</manufacturer>
+    <form>капсулы 20 мг, 40 мг</form>
+    <dosageAdult>20–40 мг 1 раз в сутки утром натощак</dosageAdult>
+    <dosageChildren>0,7–3,3 мг/кг/сут с 2 лет</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>otc</dispensingRule>
+    <indications>
+      <item>язвенная болезнь желудка</item>
+      <item>ГЭРБ</item>
+      <item>гастрит</item>
+      <item>синдром Золлингера–Эллисона</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Лизиноприл</name>
+    <substance>Лизиноприл</substance>
+    <atc>C09AA03</atc>
+    <group>Ингибиторы АПФ</group>
+    <registrationNumber>N011205</registrationNumber>
+    <manufacturer>КРКА</manufacturer>
+    <form>таблетки 5 мг, 10 мг, 20 мг</form>
+    <dosageAdult>начало 10 мг/сут, поддерживающая 20–40 мг/сут</dosageAdult>
+    <dosageChildren>0,1 мг/кг/сут с 6 лет</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>2 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
+    <indications>
+      <item>артериальная гипертензия</item>
+      <item>сердечная недостаточность</item>
+      <item>инфаркт миокарда</item>
+      <item>диабетическая нефропатия</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Аторвастатин</name>
+    <substance>Аторвастатин кальция</substance>
+    <atc>C10AA05</atc>
+    <group>Статины</group>
+    <registrationNumber>N019876</registrationNumber>
+    <manufacturer>Pfizer</manufacturer>
+    <form>таблетки 10 мг, 20 мг, 40 мг, 80 мг</form>
+    <dosageAdult>10–80 мг 1 раз в сутки в любое время</dosageAdult>
+    <dosageChildren>10–20 мг/сут с 10 лет</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
+    <indications>
+      <item>гиперхолестеринемия</item>
+      <item>дислипидемия</item>
+      <item>профилактика сердечно-сосудистых событий</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Варфарин</name>
+    <substance>Варфарин натрия</substance>
+    <atc>B01AA03</atc>
+    <group>Антикоагулянты</group>
+    <registrationNumber>N013456</registrationNumber>
+    <manufacturer>Никомед</manufacturer>
+    <form>таблетки 2,5 мг</form>
+    <dosageAdult>индивидуально по МНО, начало 5–10 мг/сут</dosageAdult>
+    <dosageChildren>индивидуально под контролем МНО</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C, беречь от света</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
+    <indications>
+      <item>тромбоз глубоких вен</item>
+      <item>тромбоэмболия лёгочной артерии</item>
+      <item>фибрилляция предсердий</item>
+      <item>искусственные клапаны сердца</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Сертралин</name>
+    <substance>Сертралин гидрохлорид</substance>
+    <atc>N06AB06</atc>
+    <group>Антидепрессанты — СИОЗС</group>
+    <registrationNumber>N016543</registrationNumber>
+    <manufacturer>Pfizer</manufacturer>
+    <form>таблетки 50 мг, 100 мг</form>
+    <dosageAdult>50–200 мг/сут 1 раз в сутки</dosageAdult>
+    <dosageChildren>25–200 мг/сут с 6 лет (ОКР)</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
+    <indications>
+      <item>депрессия</item>
+      <item>паническое расстройство</item>
+      <item>социальная фобия</item>
+      <item>обсессивно-компульсивное расстройство</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Ибупрофен</name>
+    <substance>Ибупрофен</substance>
+    <atc>M01AE01</atc>
+    <group>НПВС</group>
+    <registrationNumber>N012890</registrationNumber>
+    <manufacturer>Abbott</manufacturer>
+    <form>таблетки 200 мг, 400 мг, 600 мг</form>
+    <dosageAdult>400–800 мг каждые 6–8 ч, макс 3200 мг/сут</dosageAdult>
+    <dosageChildren>5–10 мг/кг каждые 6–8 ч с 6 мес</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C</storageConditions>
+    <shelfLife>3 года</shelfLife>
+    <dispensingRule>otc</dispensingRule>
+    <indications>
+      <item>боль</item>
+      <item>лихорадка</item>
+      <item>воспаление</item>
+      <item>артрит</item>
+    </indications>
+  </drug>
+  <drug>
+    <name>Левотироксин</name>
+    <substance>Левотироксин натрия</substance>
+    <atc>H03AA01</atc>
+    <group>Препараты щитовидной железы</group>
+    <registrationNumber>N014321</registrationNumber>
+    <manufacturer>Berlin-Chemie</manufacturer>
+    <form>таблетки 25 мкг, 50 мкг, 75 мкг, 100 мкг</form>
+    <dosageAdult>25–200 мкг/сут натощак</dosageAdult>
+    <dosageChildren>индивидуально по весу</dosageChildren>
+    <storageConditions>Хранить при температуре не выше 25°C, беречь от света</storageConditions>
+    <shelfLife>2 года</shelfLife>
+    <dispensingRule>prescription</dispensingRule>
+    <indications>
+      <item>гипотиреоз</item>
+      <item>зоб</item>
+      <item>тиреоидит</item>
+      <item>профилактика рецидива рака щитовидной железы</item>
     </indications>
   </drug>
 </grls>

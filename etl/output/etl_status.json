@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "started_at": "2026-06-02T20:33:53.714490+00:00",
+  "finished_at": "2026-06-02T20:33:53.793853+00:00",
+  "source_file": "data/raw/drugs_raw.csv",
+  "metrics": {
+    "drugs": 40,
+    "indications": 68,
+    "contraindications": 78,
+    "side_effects": 95,
+    "analogs": 61,
+    "interactions": 40,
+    "synonyms": 66
+  }
+}

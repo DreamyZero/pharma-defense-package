@@ -54,9 +54,9 @@ export const InteractionsPage = observer(() => {
                 <strong>{item.a}</strong> + <strong>{item.b}</strong>
                 <span className={`badge ${SEVERITY_CLASS[item.risk] || ''}`}>{item.risk.toUpperCase()}</span>
               </div>
-              {item.mechanism && <p className="text-muted">{item.mechanism}</p>}
-              {item.clinicalEffect && <p>{item.clinicalEffect}</p>}
-              <p className="interaction-card__rec">{item.recommendation}</p>
+              {item.mechanism && <p className="interaction-card__text text-muted">{item.mechanism}</p>}
+              {item.clinicalEffect && <p className="interaction-card__text">{item.clinicalEffect}</p>}
+              <p className="interaction-card__rec interaction-card__text">{item.recommendation}</p>
             </div>
           ))}
         </div>

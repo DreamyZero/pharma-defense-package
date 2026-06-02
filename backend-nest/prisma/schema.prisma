@@ -83,19 +83,23 @@ model DrugImport {
 }
 
 model Drug {
-  id           Int      @id @default(autoincrement())
-  name         String
-  slug         String   @unique
-  dosageForm   String?
-  manufacturer String?
-  atcCode      String?
-  rxRequired   Boolean  @default(false)
-  description  String?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  slug                 String   @unique
+  dosageForm           String?
+  manufacturer         String?
+  atcCode              String?
+  pharmacologicalGroup String?
+  registrationNumber String?
+  rxRequired           Boolean  @default(false)
+  description          String?
+  instructionMeta      Json?
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   substances        DrugSubstance[]
+  indications       DrugIndication[]
   analogsFrom       DrugAnalog[]       @relation("DrugAnalogSource")
   analogsTo         DrugAnalog[]       @relation("DrugAnalogTarget")
   contraindications Contraindication[]
@@ -106,7 +110,21 @@ model Drug {
   @@index([name])
   @@index([slug])
   @@index([atcCode])
+  @@index([pharmacologicalGroup])
   @@map("drugs")
+}
+
+model DrugIndication {
+  id        Int      @id @default(autoincrement())
+  drugId    Int
+  name      String
+  createdAt DateTime @default(now())
+
+  drug Drug @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@index([drugId])
+  @@index([name])
+  @@map("drug_indications")
 }
 
 model Substance {

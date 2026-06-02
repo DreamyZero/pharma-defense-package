@@ -1,5 +1,22 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { api } from '../shared/api';
+import { BUNDLED_CATALOG, EXPECTED_CATALOG_SIZE } from '../data/catalog-samples';
+import {
+  filterCompleteCatalog,
+  mergeCatalog,
+  normalizeDrugFromApi,
+} from '../shared/catalog-utils';
+
+export interface InstructionMeta {
+  dosageAdult?: string;
+  dosageChildren?: string;
+  storageConditions?: string;
+  shelfLife?: string;
+  dispensingRule?: string;
+  sideEffects?: string[];
+  indicationsList?: string[];
+  contraindicationsList?: string[];
+}
 
 export interface DrugResult {
   id: number;
@@ -9,12 +26,17 @@ export interface DrugResult {
   manufacturer?: string;
   pharmacologicalGroup?: string;
   dosageForm?: string;
+  description?: string;
+  registrationNumber?: string;
+  instructionMeta?: InstructionMeta | null;
   substances?: Array<{ substance: { name: string; canonicalName?: string } }>;
+  indications?: Array<{ id?: number; name: string }>;
 }
 
 export interface DrugDetail extends DrugResult {
   description?: string;
   dispensingRule?: string;
+  rxRequired?: boolean;
   contraindications?: Array<{ condition: string; note?: string }>;
   analogsFrom?: Array<{ targetDrug: { name: string; id: number }; confidence: number; reason?: string }>;
   interactionA?: Array<{ drugB: { name: string }; severity: string; clinicalEffect?: string; recommendation?: string }>;
@@ -36,7 +58,6 @@ export interface ContraResult {
   source?: string;
 }
 
-// ── Локальный каталог (fallback когда бэкенд недоступен) ───────────────────────────────────────
 interface LocalDrug {
   id: number; name: string; slug: string; substance: string;
   atc: string; group: string;
@@ -46,64 +67,26 @@ interface LocalDrug {
 }
 
 const LOCAL_DRUGS: LocalDrug[] = [
-  {
-    id: 1, name: 'Аспирин', slug: 'аспирин', substance: 'Ацетилсалициловая кислота',
-    atc: 'C01EB02', group: 'НПВС',
-    indications: ['боль', 'жар', 'тромбоз'],
-    contraindications: ['язвенная болезнь', 'детский возраст'],
-    sideEffects: ['диспепсия', 'кровотечение'],
-    analogs: ['Аспикор', 'Тромбо АСС'],
-    synonyms: ['ацетилсалициловая кислота', 'аспикор', 'тромбо асс'],
-    interactions: [{ with: 'Варфарин', risk: 'high', note: 'Повышается риск кровотечения — совместное применение требует контроля МНО' }],
-  },
-  {
-    id: 2, name: 'Метформин', slug: 'метформин', substance: 'Метформина гидрохлорид',
-    atc: 'A10BA02', group: 'Гипогликемические средства',
-    indications: ['диабет 2 типа', 'гипергликемия'],
-    contraindications: ['почечная недостаточность', 'лактацидоз'],
-    sideEffects: ['тошнота', 'диарея', 'лактацидоз'],
-    analogs: ['Глюкофаж', 'Сиофор'],
-    synonyms: ['метформина гидрохлорид', 'глюкофаж', 'сиофор'],
-    interactions: [{ with: 'Йодсодержащие контрасты', risk: 'high', note: 'Риск лактацидоза — отменить за 48 ч до введения контраста' }],
-  },
-  {
-    id: 3, name: 'Лизиноприл', slug: 'лизиноприл', substance: 'Лизиноприл',
-    atc: 'C09AA03', group: 'Ингибиторы АПФ',
-    indications: ['артериальная гипертензия', 'сердечная недостаточность'],
-    contraindications: ['беременность', 'ангионевротический отёк в анамнезе'],
-    sideEffects: ['сухой кашель', 'гипотензия', 'гиперкалиемия'],
-    analogs: ['Диротон', 'Лизорил'],
-    synonyms: ['диротон', 'лизорил'],
-    interactions: [{ with: 'Спиронолактон', risk: 'medium', note: 'Риск гиперкалиемии — контроль уровня калия' }],
-  },
-  {
-    id: 4, name: 'Варфарин', slug: 'варфарин', substance: 'Варфарин',
-    atc: 'B01AA03', group: 'Антикоагулянты',
-    indications: ['тромбоз', 'фибрилляция предсердий', 'ТЭЛА'],
-    contraindications: ['беременность', 'активное кровотечение'],
-    sideEffects: ['кровотечение', 'некроз кожи'],
-    analogs: ['Варфарекс'],
-    synonyms: ['варфарекс'],
-    interactions: [{ with: 'Аспирин', risk: 'high', note: 'Повышается риск кровотечения — совместное применение требует контроля МНО' }],
-  },
-  {
-    id: 5, name: 'Ибупрофен', slug: 'ибупрофен', substance: 'Ибупрофен',
-    atc: 'M01AE01', group: 'НПВС',
-    indications: ['боль', 'воспаление', 'лихорадка'],
-    contraindications: ['язвенная болезнь', 'тяжёлая почечная недостаточность'],
-    sideEffects: ['гастропатия', 'отёки', 'повышение АД'],
-    analogs: ['Нурофен', 'Миг', 'Адвил'],
-    synonyms: ['нурофен', 'миг', 'адвил'],
-    interactions: [{ with: 'Аспирин', risk: 'medium', note: 'Снижается антиагрегантный эффект аспирина при совместном приёме' }],
-  },
+  { id: 1, name: 'Аспирин', slug: 'аспирин', substance: 'Ацетилсалициловая кислота', atc: 'C01EB02', group: 'НПВС', indications: ['боль', 'жар'], contraindications: ['язвенная болезнь', 'детский возраст'], sideEffects: ['диспепсия'], analogs: ['Аспикор'], synonyms: ['аспикор'], interactions: [{ with: 'Варфарин', risk: 'high', note: 'Риск кровотечения' }] },
+  { id: 2, name: 'Метформин', slug: 'метформин', substance: 'Метформина гидрохлорид', atc: 'A10BA02', group: 'Гипогликемические', indications: ['диабет'], contraindications: ['почечная недостаточность'], sideEffects: ['тошнота'], analogs: ['Глюкофаж'], synonyms: ['глюкофаж'], interactions: [] },
+  { id: 3, name: 'Лизиноприл', slug: 'лизиноприл', substance: 'Лизиноприл', atc: 'C09AA03', group: 'Ингибиторы АПФ', indications: ['гипертензия'], contraindications: ['беременность'], sideEffects: ['кашель'], analogs: ['Диротон'], synonyms: ['диротон'], interactions: [] },
+  { id: 4, name: 'Варфарин', slug: 'варфарин', substance: 'Варфарин', atc: 'B01AA03', group: 'Антикоагулянты', indications: ['тромбоз'], contraindications: ['беременность'], sideEffects: ['кровотечение'], analogs: [], synonyms: [], interactions: [{ with: 'Аспирин', risk: 'high', note: 'Риск кровотечения' }] },
+  { id: 5, name: 'Ибупрофен', slug: 'ибупрофен', substance: 'Ибупрофен', atc: 'M01AE01', group: 'НПВС', indications: ['боль'], contraindications: ['язвенная болезнь'], sideEffects: ['гастропатия'], analogs: ['Нурофен'], synonyms: ['нурофен'], interactions: [] },
 ];
+
+function localToResult(d: LocalDrug): DrugResult {
+  return {
+    id: d.id, name: d.name, slug: d.slug, atcCode: d.atc,
+    pharmacologicalGroup: d.group, dosageForm: 'Таблетки',
+    substances: [{ substance: { name: d.substance } }],
+  };
+}
 
 function localByName(name: string): LocalDrug | undefined {
   const n = name.trim().toLowerCase();
   return LOCAL_DRUGS.find(
-    d => d.name.toLowerCase() === n ||
-         d.substance.toLowerCase() === n ||
-         d.synonyms.some(s => s.toLowerCase() === n),
+    d => d.name.toLowerCase() === n || d.substance.toLowerCase() === n ||
+      d.synonyms.some(s => s.toLowerCase() === n),
   );
 }
 
@@ -113,86 +96,203 @@ function localBySlug(slug: string): LocalDrug | undefined {
 
 function localToDetail(d: LocalDrug): DrugDetail {
   return {
-    id: d.id,
-    name: d.name,
-    slug: d.slug,
-    atcCode: d.atc,
-    manufacturer: '',
-    pharmacologicalGroup: d.group,
-    dosageForm: 'Таблетки',
-    description:
-      `${d.group}. Показания: ${d.indications.join(', ')}. ` +
-      `Побочные эффекты: ${d.sideEffects.join(', ')}.`,
-    substances: [{ substance: { name: d.substance } }],
+    ...localToResult(d),
+    description: `${d.group}. Показания: ${d.indications.join(', ')}.`,
     contraindications: d.contraindications.map(c => ({ condition: c })),
     analogsFrom: d.analogs.map((name, i) => ({
-      targetDrug: { id: -(i + 1), name },
-      confidence: 90,
-      reason: 'Одно действующее вещество / группа',
+      targetDrug: { id: -(i + 1), name }, confidence: 90, reason: 'То же МНН / группа',
     })),
     interactionA: d.interactions.map(ix => ({
-      drugB: { name: ix.with },
-      severity: ix.risk,
-      clinicalEffect: ix.note,
-      recommendation: ix.note,
+      drugB: { name: ix.with }, severity: ix.risk, clinicalEffect: ix.note, recommendation: ix.note,
     })),
     interactionB: [],
   };
 }
 
 function normalizeConfidence(c: number): number {
-  if (c === null || c === undefined) return 0;
+  if (c == null) return 0;
   return c <= 1 ? Math.round(c * 100) : Math.round(c);
 }
 
-// ── Store ───────────────────────────────────────────────────────────────────────────────────────
+const CATALOG_CACHE_KEY = 'pharma_catalog_cache_v1';
+
+function readCatalogCache(): DrugResult[] | null {
+  try {
+    const raw = sessionStorage.getItem(CATALOG_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DrugResult[];
+    const complete = filterCompleteCatalog(parsed);
+    if (complete.length >= EXPECTED_CATALOG_SIZE - 2) return complete;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCatalogCache(catalog: DrugResult[]) {
+  if (filterCompleteCatalog(catalog).length < EXPECTED_CATALOG_SIZE - 2) return;
+  try {
+    sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(catalog));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function matchesQuery(drug: DrugResult, q: string): boolean {
+  const n = q.trim().toLowerCase();
+  if (!n) return true;
+  if (drug.name.toLowerCase().includes(n)) return true;
+  if (drug.atcCode?.toLowerCase().includes(n)) return true;
+  if (drug.pharmacologicalGroup?.toLowerCase().includes(n)) return true;
+  if (drug.substances?.some(s => s.substance.name.toLowerCase().includes(n))) return true;
+  if (drug.indications?.some(i => i.name.toLowerCase().includes(n))) return true;
+  return false;
+}
+
 class DrugsStore {
-  results: DrugResult[] = [];
+  catalog: DrugResult[] = [];
+  catalogLoaded = false;
+  searchQuery = '';
+  selectedSlug: string | null = null;
   selectedDrug: DrugDetail | null = null;
-  analogs: any = null;
+  analogs: { drug: string; analogs: Array<{ id: number; name: string; substances?: string[]; confidence?: number; reason?: string }> } | null = null;
   interactions: InteractionResult[] = [];
   contraResult: ContraResult | null = null;
-  isLoading = false;
+  catalogLoading = false;
+  detailLoading = false;
+  actionLoading = false;
   error: string | null = null;
-  searchQuery = '';
   interactionList: string[] = [];
 
-  constructor() { makeAutoObservable(this); }
+  constructor() {
+    makeAutoObservable(this);
+  }
 
-  // ── search ────────────────────────────────────────────────────────────────────────────────
-  async searchDrugs(q: string) {
-    this.searchQuery = q;
-    if (!q || q.length < 2) { runInAction(() => { this.results = []; }); return; }
-    this.isLoading = true;
-    this.error = null;
-    const localFallback = (): DrugResult[] =>
-      LOCAL_DRUGS
-        .filter(d =>
-          d.name.toLowerCase().includes(q.toLowerCase()) ||
-          d.substance.toLowerCase().includes(q.toLowerCase()) ||
-          d.synonyms.some(s => s.includes(q.toLowerCase())))
-        .map(d => ({
-          id: d.id, name: d.name, slug: d.slug,
-          atcCode: d.atc, manufacturer: '',
-          pharmacologicalGroup: d.group,
-          dosageForm: 'Таблетки',
-          substances: [{ substance: { name: d.substance } }],
-        }));
+  get isLoading() {
+    return this.catalogLoading || this.detailLoading || this.actionLoading;
+  }
+
+  get visibleDrugs(): DrugResult[] {
+    const q = this.searchQuery.trim();
+    if (!q) return this.catalog;
+    return this.catalog.filter(d => matchesQuery(d, q));
+  }
+
+  resetCatalog() {
+    this.catalog = [];
+    this.catalogLoaded = false;
+    this.catalogLoading = false;
     try {
-      const { data } = await api.get('/drugs/search', { params: { q } });
-      runInAction(() => {
-        this.results = Array.isArray(data) && data.length > 0 ? data : localFallback();
-      });
+      sessionStorage.removeItem(CATALOG_CACHE_KEY);
     } catch {
-      runInAction(() => { this.results = localFallback(); });
-    } finally {
-      runInAction(() => { this.isLoading = false; });
+      /* ignore */
     }
   }
 
-  // ── detail ───────────────────────────────────────────────────────────────────────────────
+  hydrateCatalogFromCache() {
+    const cached = readCatalogCache();
+    if (!cached?.length) return false;
+    this.catalog = cached;
+    this.catalogLoaded = true;
+    return true;
+  }
+
+  async loadCatalog(force = false) {
+    const hasFullCatalog =
+      this.catalogLoaded &&
+      filterCompleteCatalog(this.catalog).length >= EXPECTED_CATALOG_SIZE - 2;
+    if (!force && hasFullCatalog) {
+      return;
+    }
+
+    if (!this.catalog.length || force) {
+      if (!this.hydrateCatalogFromCache()) {
+        runInAction(() => {
+          this.catalog = BUNDLED_CATALOG;
+        });
+      }
+    }
+
+    if (!force && filterCompleteCatalog(this.catalog).length >= EXPECTED_CATALOG_SIZE - 2) {
+      this.catalogLoaded = true;
+      return;
+    }
+
+    this.catalogLoading = true;
+    this.error = null;
+
+    try {
+      const { data } = await api.get('/drugs/catalog');
+      runInAction(() => {
+        const raw = (Array.isArray(data) ? data : []).map((d: Record<string, unknown>) =>
+          normalizeDrugFromApi(d),
+        );
+        this.catalog = mergeCatalog(raw, BUNDLED_CATALOG);
+        this.catalogLoaded = true;
+        writeCatalogCache(this.catalog);
+      });
+    } catch {
+      runInAction(() => {
+        this.catalog = BUNDLED_CATALOG;
+        this.catalogLoaded = true;
+        this.error = 'Не удалось связаться с API — показан локальный каталог (40 препаратов)';
+      });
+    } finally {
+      runInAction(() => { this.catalogLoading = false; });
+    }
+  }
+
+  setSearchQuery(q: string) {
+    this.searchQuery = q;
+  }
+
+  /** Сброс поиска и полный каталог (кнопка «Показать все препараты»). */
+  showAllDrugs() {
+    this.searchQuery = '';
+    const complete = filterCompleteCatalog(this.catalog).length;
+    if (complete >= EXPECTED_CATALOG_SIZE - 2) {
+      return;
+    }
+    try {
+      sessionStorage.removeItem(CATALOG_CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+    this.catalog = [];
+    this.catalogLoaded = false;
+    void this.loadCatalog(true);
+  }
+
+  async refreshCatalogFromApi() {
+    const q = this.searchQuery.trim();
+    if (q.length < 2) return;
+    this.catalogLoading = true;
+    try {
+      const { data } = await api.get('/drugs/search', { params: { q } });
+      if (Array.isArray(data) && data.length > 0) {
+        runInAction(() => {
+          const ids = new Set(this.catalog.map(c => c.id));
+          for (const d of filterCompleteCatalog(data)) {
+            if (!ids.has(d.id)) {
+              this.catalog.push(d);
+              ids.add(d.id);
+            }
+          }
+        });
+      }
+    } catch { /* keep local filter */ }
+    finally {
+      runInAction(() => { this.catalogLoading = false; });
+    }
+  }
+
+  selectDrug(slug: string) {
+    this.selectedSlug = slug;
+    this.fetchDrugDetail(slug);
+  }
+
   async fetchDrugDetail(slug: string) {
-    this.isLoading = true;
+    this.detailLoading = true;
     this.selectedDrug = null;
     this.error = null;
     try {
@@ -203,71 +303,73 @@ class DrugsStore {
           this.selectedDrug = {
             ...data,
             description: data.description ||
-              (loc ? `${loc.group}. Показания: ${loc.indications.join(', ')}. Побочные эффекты: ${loc.sideEffects.join(', ')}.` : undefined),
+              (loc ? `${loc.group}. Показания: ${loc.indications.join(', ')}.` : undefined),
             dosageForm: data.dosageForm || 'Таблетки',
             contraindications: data.contraindications?.length
               ? data.contraindications
               : (loc?.contraindications.map(c => ({ condition: c })) ?? []),
             analogsFrom: data.analogsFrom?.length
               ? data.analogsFrom
-              : (loc?.analogs.map((name, i) => ({ targetDrug: { id: -(i+1), name }, confidence: 90, reason: 'Одно действующее вещество / группа' })) ?? []),
+              : (loc?.analogs.map((name, i) => ({
+                targetDrug: { id: -(i + 1), name }, confidence: 90, reason: 'То же МНН',
+              })) ?? []),
             interactionA: data.interactionA?.length
               ? data.interactionA
-              : (loc?.interactions.map(ix => ({ drugB: { name: ix.with }, severity: ix.risk, clinicalEffect: ix.note, recommendation: ix.note })) ?? []),
+              : (loc?.interactions.map(ix => ({
+                drugB: { name: ix.with }, severity: ix.risk, clinicalEffect: ix.note, recommendation: ix.note,
+              })) ?? []),
             interactionB: data.interactionB ?? [],
           };
+          this.detailLoading = false;
         });
         return;
       }
-    } catch { /* fall through to local */ }
+    } catch { /* local */ }
     const loc = localBySlug(slug) || localByName(slug);
     runInAction(() => {
       this.selectedDrug = loc ? localToDetail(loc) : null;
       this.error = loc ? null : 'Препарат не найден';
-      this.isLoading = false;
+      this.detailLoading = false;
     });
   }
 
-  clearSelectedDrug() { this.selectedDrug = null; }
+  clearSelectedDrug() {
+    this.selectedDrug = null;
+    this.selectedSlug = null;
+  }
 
-  // ── analogs ─────────────────────────────────────────────────────────────────────────────
   async fetchAnalogs(name: string) {
-    this.isLoading = true;
-    this.analogs = null;
+    this.actionLoading = true;
     const localFallback = () => {
       const loc = localByName(name);
       return {
         drug: loc?.name ?? name,
         analogs: (loc?.analogs ?? []).map((aName, i) => ({
-          id: -(i + 1), name: aName,
-          substances: [loc?.substance ?? ''],
-          confidence: 90,
-          reason: 'Одно действующее вещество / группа',
+          id: -(i + 1), name: aName, substances: [loc?.substance ?? ''], confidence: 90,
+          reason: 'То же МНН / группа',
         })),
       };
     };
     try {
       const { data } = await api.get(`/analogs/${encodeURIComponent(name)}`);
-      const analogs = (data.analogs || []).map((a: any) => ({
+      const analogs = (data.analogs || []).map((a: { confidence: number }) => ({
         ...a,
         confidence: normalizeConfidence(a.confidence),
       }));
       runInAction(() => {
-        this.analogs = analogs.length > 0
-          ? { drug: data.drug, analogs }
-          : localFallback();
+        this.analogs = analogs.length > 0 ? { drug: data.drug, analogs } : localFallback();
       });
+      runInAction(() => { this.actionLoading = false; });
+      return this.analogs;
     } catch {
-      runInAction(() => { this.analogs = localFallback(); });
-    } finally {
-      runInAction(() => { this.isLoading = false; });
+      const fb = localFallback();
+      runInAction(() => { this.analogs = fb; this.actionLoading = false; });
+      return fb;
     }
   }
 
-  // ── interactions ──────────────────────────────────────────────────────────────────────────
   async checkInteractions(items: string[]) {
-    this.isLoading = true;
-    this.error = null;
+    this.actionLoading = true;
     const localFallback = (): InteractionResult[] =>
       items.flatMap((a, i) =>
         items.slice(i + 1).map(b => {
@@ -277,45 +379,39 @@ class DrugsStore {
             da?.interactions.find(x => x.with.toLowerCase() === (db?.name ?? b).toLowerCase()) ??
             db?.interactions.find(x => x.with.toLowerCase() === (da?.name ?? a).toLowerCase());
           return {
-            a: da?.name ?? a,
-            b: db?.name ?? b,
+            a: da?.name ?? a, b: db?.name ?? b,
             risk: (hit?.risk ?? 'low') as 'high' | 'medium' | 'low',
-            mechanism: undefined,
-            clinicalEffect: hit?.note ?? undefined,
-            recommendation: hit?.note ?? 'Значимое взаимодействие не найдено в базе',
+            clinicalEffect: hit?.note,
+            recommendation: hit?.note ?? 'Значимое взаимодействие не найдено',
           };
         }),
       );
     try {
       const { data } = await api.post('/interactions/check', { items });
-      const results: InteractionResult[] = Array.isArray(data) && data.length > 0 ? data : localFallback();
-      runInAction(() => { this.interactions = results; });
+      runInAction(() => {
+        this.interactions = Array.isArray(data) && data.length > 0 ? data : localFallback();
+      });
     } catch {
       runInAction(() => { this.interactions = localFallback(); });
     } finally {
-      runInAction(() => { this.isLoading = false; });
+      runInAction(() => { this.actionLoading = false; });
     }
   }
 
-  // ── contra ──────────────────────────────────────────────────────────────────────────────
   async checkContra(drug: string, age: number, context: string) {
-    this.isLoading = true;
+    this.actionLoading = true;
     try {
       const { data } = await api.post('/contra/check', { drug, age, context });
       runInAction(() => { this.contraResult = data; });
     } catch {
       const loc = localByName(drug);
       const warnings: string[] = [];
-      if (loc) {
-        if (age < 18 && loc.contraindications.includes('детский возраст')) warnings.push('Противопоказан в детском возрасте');
-        if (context === 'pregnancy' && loc.contraindications.includes('беременность')) warnings.push('Противопоказан при беременности');
-        loc.contraindications.forEach(c => { if (!warnings.some(w => w.includes(c))) warnings.push(c); });
-      }
+      if (loc) loc.contraindications.forEach(c => warnings.push(c));
       runInAction(() => {
-        this.contraResult = { drug: loc?.name ?? drug, warnings: warnings.length ? warnings : ['Данные о противопоказаниях недоступны'] };
+        this.contraResult = { drug: loc?.name ?? drug, warnings };
       });
     } finally {
-      runInAction(() => { this.isLoading = false; });
+      runInAction(() => { this.actionLoading = false; });
     }
   }
 

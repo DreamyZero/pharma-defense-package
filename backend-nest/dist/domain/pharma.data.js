@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.drugs = void 0;
+exports.drugs = [
+    { id: 1, name: 'Аспирин', substance: 'Ацетилсалициловая кислота', atc: 'C01EB02', group: 'НПВС', indications: ['боль', 'жар', 'тромбоз'], contraindications: ['язвенная болезнь', 'детский возраст'], sideEffects: ['диспепсия', 'кровотечение'], analogs: ['Аспикор', 'Тромбо АСС'], synonyms: ['ацетилсалициловая кислота', 'аспикор', 'тромбо асс'], interactions: [{ with: 'Варфарин', risk: 'high', note: 'Повышается риск кровотечения' }] },
+    { id: 2, name: 'Метформин', substance: 'Метформина гидрохлорид', atc: 'A10BA02', group: 'Гипогликемические средства', indications: ['диабет', 'гипергликемия'], contraindications: ['почечная недостаточность'], sideEffects: ['тошнота', 'лактацидоз'], analogs: ['Глюкофаж', 'Сиофор'], synonyms: ['метформина гидрохлорид', 'глюкофаж'], interactions: [{ with: 'Йодсодержащие контрасты', risk: 'high', note: 'Риск лактацидоза' }] },
+    { id: 3, name: 'Лизиноприл', substance: 'Лизиноприл', atc: 'C09AA03', group: 'Ингибиторы АПФ', indications: ['гипертензия', 'сердечная недостаточность'], contraindications: ['беременность', 'детский возраст'], sideEffects: ['кашель', 'гипотензия'], analogs: ['Диротон', 'Лизорил'], synonyms: ['диротон', 'лизорил'], interactions: [{ with: 'Спиронолактон', risk: 'medium', note: 'Риск гиперкалиемии' }] },
+    { id: 4, name: 'Варфарин', substance: 'Варфарин', atc: 'B01AA03', group: 'Антикоагулянты', indications: ['тромбоз', 'фибрилляция предсердий'], contraindications: ['беременность'], sideEffects: ['кровотечение', 'анемия'], analogs: ['Варфарекс'], synonyms: ['варфарекс'], interactions: [{ with: 'Аспирин', risk: 'high', note: 'Повышается риск кровотечения' }] },
+    { id: 5, name: 'Ибупрофен', substance: 'Ибупрофен', atc: 'M01AE01', group: 'НПВС', indications: ['боль', 'воспаление', 'жар'], contraindications: ['язвенная болезнь'], sideEffects: ['гастропатия', 'отеки'], analogs: ['Нурофен', 'Миг'], synonyms: ['нурофен', 'миг'], interactions: [{ with: 'Аспирин', risk: 'medium', note: 'Снижается антиагрегантный эффект' }] }
+];
+//# sourceMappingURL=pharma.data.js.map

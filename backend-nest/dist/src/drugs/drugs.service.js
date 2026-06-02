@@ -8,16 +8,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var DrugsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DrugsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../database/prisma.service");
 const pharma_repository_1 = require("../domain/pharma.repository");
 const pharma_data_1 = require("../domain/pharma.data");
-let DrugsService = class DrugsService {
+let DrugsService = DrugsService_1 = class DrugsService {
     constructor(repo, prisma) {
         this.repo = repo;
         this.prisma = prisma;
+        this.logger = new common_1.Logger(DrugsService_1.name);
     }
     localBySlug(slug) {
         return pharma_data_1.drugs.find(d => d.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase());
@@ -69,16 +71,29 @@ let DrugsService = class DrugsService {
                     OR: [
                         { name: { contains: n, mode: 'insensitive' } },
                         { atcCode: { contains: n, mode: 'insensitive' } },
+                        { pharmacologicalGroup: { contains: n, mode: 'insensitive' } },
                         { substances: { some: { substance: { name: { contains: n, mode: 'insensitive' } } } } },
+                        {
+                            substances: {
+                                some: {
+                                    substance: {
+                                        synonymLinks: { some: { synonym: { contains: n, mode: 'insensitive' } } },
+                                    },
+                                },
+                            },
+                        },
+                        { indications: { some: { name: { contains: n, mode: 'insensitive' } } } },
                     ],
                 },
-                include: { substances: { include: { substance: true } } },
+                include: { substances: { include: { substance: true } }, indications: true },
                 take: 20,
             });
             if (drugs.length > 0)
                 return drugs;
         }
-        catch { }
+        catch (err) {
+            this.logger.warn(`[search] Prisma недоступна, переключаемся на локальные данные. Причина: ${err.message}`);
+        }
         return this.repo.search(q).map(d => ({
             id: d.id,
             name: d.name,
@@ -95,6 +110,7 @@ let DrugsService = class DrugsService {
                 where: { slug },
                 include: {
                     substances: { include: { substance: { include: { synonymLinks: true } } } },
+                    indications: true,
                     contraindications: true,
                     analogsFrom: { include: { targetDrug: true } },
                     interactionA: { include: { drugB: true } },
@@ -106,7 +122,9 @@ let DrugsService = class DrugsService {
                 return this.enrichDrugDetail(dbDrug, local);
             }
         }
-        catch { }
+        catch (err) {
+            this.logger.warn(`[getBySlug] Prisma недоступна для slug="${slug}". Причина: ${err.message}`);
+        }
         const local = this.localBySlug(slug);
         if (!local)
             return null;
@@ -140,28 +158,78 @@ let DrugsService = class DrugsService {
         const n = name.trim().toLowerCase();
         try {
             const drug = await this.prisma.drug.findFirst({
-                where: { name: { equals: n, mode: 'insensitive' } },
+                where: {
+                    OR: [
+                        { name: { equals: n, mode: 'insensitive' } },
+                        { substances: { some: { substance: { name: { equals: n, mode: 'insensitive' } } } } },
+                        {
+                            substances: {
+                                some: {
+                                    substance: {
+                                        synonymLinks: { some: { synonym: { equals: n, mode: 'insensitive' } } },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
                 include: {
                     analogsFrom: { include: { targetDrug: { include: { substances: { include: { substance: true } } } } } },
                     substances: { include: { substance: true } },
                 },
             });
-            if (drug && drug.analogsFrom.length > 0) {
-                return {
-                    drug: drug.name,
-                    analogs: drug.analogsFrom.map((a) => ({
+            if (drug) {
+                const primarySubstance = drug.substances.find(ds => ds.isPrimary) ?? drug.substances[0];
+                const bySubstance = primarySubstance
+                    ? await this.prisma.drug.findMany({
+                        where: {
+                            id: { not: drug.id },
+                            active: true,
+                            substances: {
+                                some: {
+                                    isPrimary: true,
+                                    substanceId: primarySubstance.substanceId,
+                                },
+                            },
+                        },
+                        include: { substances: { include: { substance: true } } },
+                        take: 30,
+                    })
+                    : [];
+                const merged = new Map();
+                for (const a of drug.analogsFrom) {
+                    merged.set(a.targetDrug.id, {
                         id: a.targetDrug.id,
                         name: a.targetDrug.name,
-                        substances: a.targetDrug.substances.map((s) => s.substance.name),
+                        substances: a.targetDrug.substances.map(s => s.substance.name),
                         confidence: a.confidence != null
                             ? (a.confidence <= 1 ? Math.round(a.confidence * 100) : Math.round(a.confidence))
-                            : 0,
-                        reason: a.reason,
-                    })),
-                };
+                            : 90,
+                        reason: a.reason || 'Запись в справочнике аналогов',
+                    });
+                }
+                for (const candidate of bySubstance) {
+                    if (merged.has(candidate.id))
+                        continue;
+                    merged.set(candidate.id, {
+                        id: candidate.id,
+                        name: candidate.name,
+                        substances: candidate.substances.map(s => s.substance.name),
+                        confidence: 95,
+                        reason: `Одно действующее вещество: ${primarySubstance?.substance.name}`,
+                    });
+                }
+                if (merged.size > 0) {
+                    return {
+                        drug: drug.name,
+                        analogs: Array.from(merged.values()),
+                    };
+                }
             }
         }
-        catch { }
+        catch (err) {
+            this.logger.warn(`[analogs] Prisma недоступна для "${name}". Причина: ${err.message}`);
+        }
         const local = this.localByName(name);
         if (!local)
             return { drug: name, analogs: [] };
@@ -205,7 +273,9 @@ let DrugsService = class DrugsService {
                     return results;
             }
         }
-        catch { }
+        catch (err) {
+            this.logger.warn(`[interactions] Prisma недоступна. Причина: ${err.message}`);
+        }
         return items.flatMap((a, i) => items.slice(i + 1).map(b => {
             const da = this.localByName(a);
             const db = this.localByName(b);
@@ -241,14 +311,28 @@ let DrugsService = class DrugsService {
                     return { drug: dbDrug.name, warnings, source: 'database' };
             }
         }
-        catch { }
+        catch (err) {
+            this.logger.warn(`[contra] Prisma недоступна для "${drug}". Причина: ${err.message}`);
+        }
         const local = this.localByName(drug);
         if (!local)
             return { drug: null, warnings: [] };
-        if (age < 18 && local.contraindications.includes('детский возраст'))
+        const has = (part) => local.contraindications.some(c => c.toLowerCase().includes(part));
+        if (age < 18 && has('детск'))
             warnings.push('Противопоказан в детском возрасте');
-        if (context === 'pregnancy' && local.contraindications.includes('беременность'))
+        if (context === 'pregnancy' && has('беремен'))
             warnings.push('Противопоказан при беременности');
+        if (context === 'lactation' && has('лактац'))
+            warnings.push('Противопоказан при кормлении грудью');
+        if (context === 'renal' && has('почечн'))
+            warnings.push('Противопоказан при почечной недостаточности');
+        if (context === 'hepatic' && has('печен'))
+            warnings.push('Противопоказан при печёночной недостаточности');
+        if (context === 'pediatric' && has('детск'))
+            warnings.push('Противопоказан в детском возрасте');
+        if (!context && warnings.length === 0) {
+            local.contraindications.forEach(c => warnings.push(c));
+        }
         return { drug: local.name, warnings, source: 'repository' };
     }
     async dashboard() {
@@ -256,12 +340,17 @@ let DrugsService = class DrugsService {
             this.prisma.drug.count({ where: { active: true } }),
             this.prisma.substance.count(),
             this.prisma.drugInteraction.count(),
-        ]).catch(() => [0, 0, 0]);
+        ]).catch((err) => {
+            this.logger.warn(`[dashboard] Prisma недоступна, возвращаем fallback-метрики. Причина: ${err.message}`);
+            return [0, 0, 0];
+        });
+        const isFallback = drugsCount === 0 && substancesCount === 0 && interactionsCount === 0;
         return {
+            isFallback,
             metrics: [
-                { label: 'Препаратов в базе', value: drugsCount || '14 283', note: '+247 за месяц' },
-                { label: 'Действующих веществ', value: substancesCount || '3 841', note: 'Синонимов: 9 124' },
-                { label: 'Взаимодействий в графе', value: interactionsCount || '28 654', note: 'HIGH: 4 201' },
+                { label: 'Препаратов в базе', value: isFallback ? '14 283*' : drugsCount, note: isFallback ? '* демо-данные' : '+247 за месяц' },
+                { label: 'Действующих веществ', value: isFallback ? '3 841*' : substancesCount, note: isFallback ? '* демо-данные' : 'Синонимов: 9 124' },
+                { label: 'Взаимодействий в графе', value: isFallback ? '28 654*' : interactionsCount, note: isFallback ? '* демо-данные' : 'HIGH: 4 201' },
                 { label: 'Покрытие ГРЛС', value: '98%', note: 'Обновлено: 01.05.2025' },
             ],
             recentQueries: [
@@ -273,7 +362,7 @@ let DrugsService = class DrugsService {
     }
 };
 exports.DrugsService = DrugsService;
-exports.DrugsService = DrugsService = __decorate([
+exports.DrugsService = DrugsService = DrugsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [pharma_repository_1.PharmaRepository, prisma_service_1.PrismaService])
 ], DrugsService);

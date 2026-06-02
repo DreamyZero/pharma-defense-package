@@ -1,8 +1,8 @@
 metric,value
-drugs,5
-indications,12
-contraindications,7
-side_effects,10
-analogs,9
-interactions,5
-synonyms,10
+drugs,40
+indications,68
+contraindications,78
+side_effects,95
+analogs,61
+interactions,40
+synonyms,66

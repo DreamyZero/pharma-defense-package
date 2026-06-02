@@ -6,16 +6,16 @@ export declare class UsersController {
     me(req: any): Promise<{
         id: number;
         createdAt: Date;
-        fullName: string;
         email: string;
+        fullName: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
     }>;
     update(req: any, dto: UpdateUserDto): Promise<{
         id: number;
-        fullName: string;
         email: string;
+        fullName: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;

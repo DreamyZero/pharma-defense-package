@@ -4,6 +4,7 @@ import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Role } from '../auth/roles.enum';
 import { AdminService } from './admin.service';
+import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -32,5 +33,14 @@ export class AdminController {
     @Body() body: { role: Role },
   ) {
     return this.adminService.setRole(id, body.role);
+  }
+
+  @ApiOperation({ summary: 'Обновить email и/или пароль пользователя' })
+  @Patch('users/:id')
+  updateUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AdminUpdateUserDto,
+  ) {
+    return this.adminService.updateUser(id, dto);
   }
 }

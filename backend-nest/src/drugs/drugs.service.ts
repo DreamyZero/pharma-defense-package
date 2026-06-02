@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PharmaRepository } from '../domain/pharma.repository';
 import { drugs as localDrugs } from '../domain/pharma.data';
@@ -56,9 +57,76 @@ export class DrugsService {
 
   // ── routes ─────────────────────────────────────────────────────────────────
 
+  private catalogInclude() {
+    return {
+      substances: { include: { substance: true } },
+      indications: { orderBy: { name: 'asc' as const } },
+    };
+  }
+
+  /** Только полные карточки каталога (без заглушек аналогов / пустых записей). */
+  private isCompleteCatalogDrug(drug: {
+    registrationNumber?: string | null;
+    manufacturer?: string | null;
+    atcCode?: string | null;
+    pharmacologicalGroup?: string | null;
+    description?: string | null;
+    instructionMeta?: unknown;
+    indications?: { name: string }[];
+  }): boolean {
+    if (!drug.registrationNumber?.trim()) return false;
+    if (!drug.manufacturer?.trim()) return false;
+    if (!drug.atcCode?.trim()) return false;
+    if (!drug.pharmacologicalGroup?.trim()) return false;
+    if (!drug.description?.trim() || drug.description.length < 30) return false;
+    const meta = drug.instructionMeta as Record<string, unknown> | null;
+    if (!meta || typeof meta !== 'object') return false;
+    const dosage = String(meta.dosageAdult || '').trim();
+    if (!dosage || dosage === 'По инструкции') return false;
+    const indications =
+      (Array.isArray(meta.indicationsList) && meta.indicationsList.length > 0) ||
+      (drug.indications?.length ?? 0) > 0;
+    if (!indications) return false;
+    return true;
+  }
+
+  async catalog() {
+    try {
+      const drugs = await this.prisma.drug.findMany({
+        where: {
+          active: true,
+          registrationNumber: { not: null },
+          instructionMeta: { not: Prisma.DbNull },
+        },
+        include: this.catalogInclude(),
+        orderBy: { name: 'asc' },
+        take: 100,
+      });
+      const complete = drugs.filter(d => this.isCompleteCatalogDrug(d));
+      if (complete.length > 0) return complete;
+    } catch (err) {
+      this.logger.warn(`[catalog] Prisma недоступна. ${(err as Error).message}`);
+    }
+    return this.repo.all().map(d => ({
+      id: d.id,
+      name: d.name,
+      slug: d.name.toLowerCase().replace(/\s+/g, '-'),
+      atcCode: d.atc,
+      manufacturer: '',
+      pharmacologicalGroup: d.group,
+      dosageForm: 'Таблетки',
+      substances: [{ substance: { name: d.substance } }],
+      indications: (d.indications || []).map((name: string) => ({ name })),
+    }));
+  }
+
   async search(q: string) {
-    if (!q || q.length < 2) return [];
-    const n = q.trim().toLowerCase();
+    const trimmed = (q || '').trim();
+    if (!trimmed) {
+      return this.catalog();
+    }
+    if (trimmed.length < 2) return [];
+    const n = trimmed.toLowerCase();
     try {
       const drugs = await this.prisma.drug.findMany({
         where: {
@@ -66,13 +134,25 @@ export class DrugsService {
           OR: [
             { name: { contains: n, mode: 'insensitive' } },
             { atcCode: { contains: n, mode: 'insensitive' } },
+            { pharmacologicalGroup: { contains: n, mode: 'insensitive' } },
             { substances: { some: { substance: { name: { contains: n, mode: 'insensitive' } } } } },
+            {
+              substances: {
+                some: {
+                  substance: {
+                    synonymLinks: { some: { synonym: { contains: n, mode: 'insensitive' } } },
+                  },
+                },
+              },
+            },
+            { indications: { some: { name: { contains: n, mode: 'insensitive' } } } },
           ],
         },
-        include: { substances: { include: { substance: true } } },
-        take: 20,
+        include: { substances: { include: { substance: true } }, indications: true },
+        take: 50,
       });
-      if (drugs.length > 0) return drugs;
+      const complete = drugs.filter(d => this.isCompleteCatalogDrug(d));
+      if (complete.length > 0) return complete;
     } catch (err) {
       this.logger.warn(`[search] Prisma недоступна, переключаемся на локальные данные. Причина: ${(err as Error).message}`);
     }
@@ -93,6 +173,7 @@ export class DrugsService {
         where: { slug },
         include: {
           substances: { include: { substance: { include: { synonymLinks: true } } } },
+          indications: true,
           contraindications: true,
           analogsFrom: { include: { targetDrug: true } },
           interactionA: { include: { drugB: true } },
@@ -101,7 +182,13 @@ export class DrugsService {
       });
       if (dbDrug) {
         const local = this.localByName(dbDrug.name);
-        return this.enrichDrugDetail(dbDrug, local);
+        const enriched = this.enrichDrugDetail(dbDrug, local);
+        const indicationNames = (dbDrug.indications ?? []).map(i => i.name);
+        if (!enriched.description && indicationNames.length > 0) {
+          const group = dbDrug.pharmacologicalGroup ?? '';
+          enriched.description = `${group ? `${group}. ` : ''}Показания: ${indicationNames.join(', ')}.`.trim();
+        }
+        return enriched;
       }
     } catch (err) {
       this.logger.warn(`[getBySlug] Prisma недоступна для slug="${slug}". Причина: ${(err as Error).message}`);
@@ -141,25 +228,83 @@ export class DrugsService {
     const n = name.trim().toLowerCase();
     try {
       const drug = await this.prisma.drug.findFirst({
-        where: { name: { equals: n, mode: 'insensitive' } },
+        where: {
+          OR: [
+            { name: { equals: n, mode: 'insensitive' } },
+            { substances: { some: { substance: { name: { equals: n, mode: 'insensitive' } } } } },
+            {
+              substances: {
+                some: {
+                  substance: {
+                    synonymLinks: { some: { synonym: { equals: n, mode: 'insensitive' } } },
+                  },
+                },
+              },
+            },
+          ],
+        },
         include: {
           analogsFrom: { include: { targetDrug: { include: { substances: { include: { substance: true } } } } } },
           substances: { include: { substance: true } },
         },
       });
-      if (drug && drug.analogsFrom.length > 0) {
-        return {
-          drug: drug.name,
-          analogs: drug.analogsFrom.map((a: any) => ({
+
+      if (drug) {
+        const primarySubstance = drug.substances.find(ds => ds.isPrimary) ?? drug.substances[0];
+        const bySubstance = primarySubstance
+          ? await this.prisma.drug.findMany({
+              where: {
+                id: { not: drug.id },
+                active: true,
+                substances: {
+                  some: {
+                    isPrimary: true,
+                    substanceId: primarySubstance.substanceId,
+                  },
+                },
+              },
+              include: { substances: { include: { substance: true } } },
+              take: 30,
+            })
+          : [];
+
+        const merged = new Map<number, {
+          id: number;
+          name: string;
+          substances: string[];
+          confidence: number;
+          reason: string;
+        }>();
+
+        for (const a of drug.analogsFrom) {
+          merged.set(a.targetDrug.id, {
             id: a.targetDrug.id,
             name: a.targetDrug.name,
-            substances: a.targetDrug.substances.map((s: any) => s.substance.name),
+            substances: a.targetDrug.substances.map(s => s.substance.name),
             confidence: a.confidence != null
-            ? (a.confidence <= 1 ? Math.round(a.confidence * 100) : Math.round(a.confidence))
-            : 0,
-            reason: a.reason,
-          })),
-        };
+              ? (a.confidence <= 1 ? Math.round(a.confidence * 100) : Math.round(a.confidence))
+              : 90,
+            reason: a.reason || 'Запись в справочнике аналогов',
+          });
+        }
+
+        for (const candidate of bySubstance) {
+          if (merged.has(candidate.id)) continue;
+          merged.set(candidate.id, {
+            id: candidate.id,
+            name: candidate.name,
+            substances: candidate.substances.map(s => s.substance.name),
+            confidence: 95,
+            reason: `Одно действующее вещество: ${primarySubstance?.substance.name}`,
+          });
+        }
+
+        if (merged.size > 0) {
+          return {
+            drug: drug.name,
+            analogs: Array.from(merged.values()),
+          };
+        }
       }
     } catch (err) {
       this.logger.warn(`[analogs] Prisma недоступна для "${name}". Причина: ${(err as Error).message}`);
@@ -249,8 +394,17 @@ export class DrugsService {
     // fallback
     const local = this.localByName(drug);
     if (!local) return { drug: null, warnings: [] };
-    if (age < 18 && local.contraindications.includes('детский возраст')) warnings.push('Противопоказан в детском возрасте');
-    if (context === 'pregnancy' && local.contraindications.includes('беременность')) warnings.push('Противопоказан при беременности');
+    const has = (part: string) =>
+      local.contraindications.some(c => c.toLowerCase().includes(part));
+    if (age < 18 && has('детск')) warnings.push('Противопоказан в детском возрасте');
+    if (context === 'pregnancy' && has('беремен')) warnings.push('Противопоказан при беременности');
+    if (context === 'lactation' && has('лактац')) warnings.push('Противопоказан при кормлении грудью');
+    if (context === 'renal' && has('почечн')) warnings.push('Противопоказан при почечной недостаточности');
+    if (context === 'hepatic' && has('печен')) warnings.push('Противопоказан при печёночной недостаточности');
+    if (context === 'pediatric' && has('детск')) warnings.push('Противопоказан в детском возрасте');
+    if (!context && warnings.length === 0) {
+      local.contraindications.forEach(c => warnings.push(c));
+    }
     return { drug: local.name, warnings, source: 'repository' };
   }
 

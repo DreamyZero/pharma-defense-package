@@ -1,3 +1,4 @@
+import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,7 +28,14 @@ except FileNotFoundError as e:
 raw['drug_id'] = range(1, len(raw) + 1)
 raw['slug'] = raw['trade_name'].str.lower().str.replace(' ', '-', regex=False)
 
-drugs = raw[['drug_id', 'trade_name', 'substance', 'atc', 'group', 'slug']].copy()
+drugs = raw[
+    [
+        'drug_id', 'trade_name', 'substance', 'atc', 'group', 'slug',
+        'manufacturer', 'form', 'registration_number', 'dosage_adult', 'dosage_children',
+        'storage_conditions', 'shelf_life', 'dispensing_rule',
+        'indications', 'contraindications', 'side_effects',
+    ]
+].copy()
 indications = []
 contra = []
 side = []
@@ -56,13 +64,14 @@ for _, row in raw.iterrows():
 processed = ROOT / 'data/processed'
 processed.mkdir(parents=True, exist_ok=True)
 
-drugs.to_csv(processed / 'drugs.csv', index=False)
-pd.DataFrame(indications).to_csv(processed / 'indications.csv', index=False)
-pd.DataFrame(contra).to_csv(processed / 'contraindications.csv', index=False)
-pd.DataFrame(side).to_csv(processed / 'side_effects.csv', index=False)
-pd.DataFrame(analogs).to_csv(processed / 'analogs.csv', index=False)
-pd.DataFrame(interactions).to_csv(processed / 'interactions.csv', index=False)
-pd.DataFrame(synonyms).to_csv(processed / 'synonyms.csv', index=False)
+_csv_kw = dict(index=False, quoting=csv.QUOTE_NONNUMERIC)
+drugs.to_csv(processed / 'drugs.csv', **_csv_kw)
+pd.DataFrame(indications).to_csv(processed / 'indications.csv', **_csv_kw)
+pd.DataFrame(contra).to_csv(processed / 'contraindications.csv', **_csv_kw)
+pd.DataFrame(side).to_csv(processed / 'side_effects.csv', **_csv_kw)
+pd.DataFrame(analogs).to_csv(processed / 'analogs.csv', **_csv_kw)
+pd.DataFrame(interactions).to_csv(processed / 'interactions.csv', **_csv_kw)
+pd.DataFrame(synonyms).to_csv(processed / 'synonyms.csv', **_csv_kw)
 
 metrics = {
     'drugs': int(len(drugs)),

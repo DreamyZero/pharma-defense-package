@@ -2,8 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const load_etl_data_1 = require("./load-etl-data");
+const sync_neo4j_1 = require("./sync-neo4j");
 const prisma = new client_1.PrismaClient();
-async function main() {
+async function seedUsers() {
     const users = [
         { fullName: 'Администратор системы', email: 'admin@pharma.local', password: 'admin12345', role: 'ADMIN' },
         { fullName: 'Иванов Иван Иванович', email: 'doctor@pharma.local', password: 'doctor12345', role: 'DOCTOR' },
@@ -23,6 +25,13 @@ async function main() {
             },
         });
         console.log(`✅ ${u.role}: ${u.email} / ${u.password}`);
+    }
+}
+async function main() {
+    await seedUsers();
+    await (0, load_etl_data_1.loadEtlData)();
+    if (process.env.SKIP_NEO4J_SYNC !== '1') {
+        await (0, sync_neo4j_1.syncNeo4jFromPostgres)();
     }
 }
 main()

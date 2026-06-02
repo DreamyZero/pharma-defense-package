@@ -15,6 +15,14 @@ export class DrugsController {
   }
 
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Каталог препаратов (40 демо-позиций с полной инструкцией)' })
+  @UseGuards(JwtAuthGuard)
+  @Get('drugs/catalog')
+  catalog() {
+    return this.drugsService.catalog();
+  }
+
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Поиск препаратов по названию или веществу' })
   @ApiQuery({ name: 'q', required: true, example: 'аспирин' })
   @UseGuards(JwtAuthGuard)

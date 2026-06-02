@@ -13,6 +13,8 @@
         "baseUrl":"./",
         "incremental":true,
         "strict":true,
-        "skipLibCheck":true}
-    }
+        "skipLibCheck":true},
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist", "prisma", "**/*.spec.ts"]
+}
     

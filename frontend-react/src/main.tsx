@@ -3,11 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { authStore } from './stores/auth.store';
+import { drugsStore } from './stores/drugs.store';
+import { Icon } from './components/Icon';
 import { LoginPage } from './pages/Login/LoginPage';
 import { RegisterPage } from './pages/Register/RegisterPage';
 import { SearchPage } from './pages/Search/SearchPage';
 import { InteractionsPage } from './pages/Interactions/InteractionsPage';
-import { AnalogsPage } from './pages/Analogs/AnalogsPage';
 import { ContraPage } from './pages/Contra/ContraPage';
 import { ProfilePage } from './pages/Profile/ProfilePage';
 import { AdminPage } from './pages/Admin/AdminPage';
@@ -18,89 +19,57 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/pages.css';
 
-/* ─── Icons (inline SVG via Lucide paths) ─────────────────────────── */
-const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
-  const icons: Record<string, JSX.Element> = {
-    search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
-    zap: <><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></>,
-    repeat: <><path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>,
-    ban: <><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></>,
-    network: <><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></>,
-    user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
-    shield: <><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></>,
-    home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
-    logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
-    sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></>,
-    moon: <><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></>,
-    cross: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
-  };
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true">
-      {icons[name]}
-    </svg>
-  );
-};
+const NAV_ITEMS = [
+  { to: '/search', label: 'Справочник', desc: 'Каталог и карточки препаратов', icon: 'pill', tone: 'teal' },
+  { to: '/interactions', label: 'Взаимодействия', desc: 'Проверка совместимости списка', icon: 'zap', tone: 'amber' },
+  { to: '/contra', label: 'Противопоказания', desc: 'Учёт возраста и контекста', icon: 'ban', tone: 'red' },
+];
 
-/* ─── Auth guard ──────────────────────────────────────────────────── */
+const ADMIN_NAV_ITEMS = [
+  { to: '/graph', label: 'Граф знаний', desc: 'Связи в Neo4j', icon: 'network', tone: 'violet' },
+];
+
+function useTheme() {
+  const [theme, setTheme] = React.useState<'light' | 'dark'>(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  );
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+  return { theme, toggle: () => setTheme(t => (t === 'dark' ? 'light' : 'dark')) };
+}
+
 const RequireAuth = observer(({ children }: { children: JSX.Element }) => {
   if (!authStore.isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 });
 
-/* ─── Nav items ───────────────────────────────────────────────────── */
-const NAV_ITEMS = [
-  { to: '/search',       label: 'Поиск препаратов',  icon: 'search'  },
-  { to: '/interactions', label: 'Взаимодействия',     icon: 'zap'     },
-  { to: '/analogs',      label: 'Аналоги',            icon: 'repeat'  },
-  { to: '/contra',       label: 'Противопоказания',   icon: 'ban'     },
-  { to: '/graph',        label: 'Граф знаний',        icon: 'network' },
-];
-
-/* ─── Theme toggle logic ──────────────────────────────────────────── */
-function useTheme() {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
-  return { theme, toggle };
-}
-
-/* ─── App Shell ───────────────────────────────────────────────────── */
 const AppShell = observer(() => {
   const profile = authStore.profile;
   const { theme, toggle } = useTheme();
 
+  React.useEffect(() => {
+    authStore.fetchProfile();
+    drugsStore.hydrateCatalogFromCache();
+    drugsStore.loadCatalog();
+  }, []);
   const initials = profile?.fullName
     ? profile.fullName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
     : profile?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
     <div className="app-shell">
-      {/* Header */}
       <header className="app-header">
-        <a href="/search" className="app-header__logo">
+        <NavLink to="/search" className="app-header__logo">
           <div className="app-header__logo-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-label="PharmaBase">
-              <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"
-                fill="none" stroke="white" strokeWidth="1.5"/>
-              <path d="M12 8v8M8 12h8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            <Icon name="pill" size={20} />
           </div>
           <span>PharmaBase</span>
-        </a>
-
+        </NavLink>
         <div className="app-header__right">
-          {profile && (
-            <div className="app-header__user">
-              <div className="app-header__user-avatar">{initials}</div>
-              <span className="sr-only">{profile.fullName || profile.email}</span>
-            </div>
-          )}
+          <div className="app-header__user">
+            <div className="app-header__user-avatar">{initials}</div>
+          </div>
           <NavLink to="/profile" className="nav-link-sm">
             <Icon name="user" size={16} />
             Профиль
@@ -112,76 +81,112 @@ const AppShell = observer(() => {
             </NavLink>
           )}
           <button
+            type="button"
             className="theme-toggle"
             onClick={toggle}
             aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
           >
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
           </button>
-          <button
-            className="nav-link-sm nav-link-sm--logout"
-            onClick={() => authStore.logout()}
-          >
+          <button type="button" className="nav-link-sm nav-link-sm--logout" onClick={() => authStore.logout()}>
             <Icon name="logout" size={16} />
             Выйти
           </button>
         </div>
       </header>
 
-      {/* Body */}
       <div className="app-body">
-        {/* Sidebar */}
-        <aside className="app-sidebar">
+        <aside className="app-sidebar app-sidebar--rich">
           <div className="sidebar-section">
-            <div className="sidebar-label">Основное</div>
-            <nav className="sidebar-nav">
-              <NavLink
-                to="/search"
-                className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              >
-                <span className="nav-item__icon"><Icon name="home" size={18} /></span>
-                <span>Дашборд</span>
-              </NavLink>
-            </nav>
-          </div>
-
-          <div className="sidebar-section">
-            <div className="sidebar-label">Функции</div>
+            <div className="sidebar-label">Разделы</div>
             <nav className="sidebar-nav">
               {NAV_ITEMS.map(item => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                  className={({ isActive }) =>
+                    `nav-item nav-item--rich nav-item--${item.tone}${isActive ? ' active' : ''}`
+                  }
                 >
-                  <span className="nav-item__icon"><Icon name={item.icon} size={18} /></span>
-                  <span>{item.label}</span>
+                  <span className={`nav-item__icon-box nav-item__icon-box--${item.tone}`}>
+                    <Icon name={item.icon} size={18} />
+                  </span>
+                  <span className="nav-item__text">
+                    <span className="nav-item__label">{item.label}</span>
+                    <span className="nav-item__desc">{item.desc}</span>
+                  </span>
                 </NavLink>
               ))}
             </nav>
           </div>
 
+          {authStore.isAdmin && (
+            <div className="sidebar-section">
+              <div className="sidebar-label">Администрирование</div>
+              <nav className="sidebar-nav">
+                {ADMIN_NAV_ITEMS.map(item => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `nav-item nav-item--rich nav-item--${item.tone}${isActive ? ' active' : ''}`
+                    }
+                  >
+                    <span className={`nav-item__icon-box nav-item__icon-box--${item.tone}`}>
+                      <Icon name={item.icon} size={18} />
+                    </span>
+                    <span className="nav-item__text">
+                      <span className="nav-item__label">{item.label}</span>
+                      <span className="nav-item__desc">{item.desc}</span>
+                    </span>
+                  </NavLink>
+                ))}
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `nav-item nav-item--rich nav-item--violet${isActive ? ' active' : ''}`
+                  }
+                >
+                  <span className="nav-item__icon-box nav-item__icon-box--violet">
+                    <Icon name="shield" size={18} />
+                  </span>
+                  <span className="nav-item__text">
+                    <span className="nav-item__label">Панель админа</span>
+                    <span className="nav-item__desc">ETL, пользователи, аудит</span>
+                  </span>
+                </NavLink>
+              </nav>
+            </div>
+          )}
+
           <div className="sidebar-footer">
             <NavLink
               to="/profile"
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              className={({ isActive }) => `nav-item nav-item--rich${isActive ? ' active' : ''}`}
             >
-              <span className="nav-item__icon"><Icon name="user" size={18} /></span>
-              <span>{profile?.fullName?.split(' ')[0] ?? 'Профиль'}</span>
+              <span className="nav-item__icon-box nav-item__icon-box--teal">
+                <Icon name="user" size={18} />
+              </span>
+              <span className="nav-item__text">
+                <span className="nav-item__label">{profile?.fullName?.split(' ')[0] ?? 'Профиль'}</span>
+                <span className="nav-item__desc">{profile?.email ?? ''}</span>
+              </span>
             </NavLink>
           </div>
         </aside>
 
-        {/* Main */}
         <main className="app-main">
           <Routes>
             <Route path="/" element={<Navigate to="/search" replace />} />
-            <Route path="/search"       element={<SearchPage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/interactions" element={<InteractionsPage />} />
-            <Route path="/analogs"      element={<AnalogsPage />} />
-            <Route path="/contra"       element={<ContraPage />} />
-            <Route path="/graph"        element={<GraphPage />} />
-            <Route path="/profile"      element={<ProfilePage />} />
+            <Route path="/contra" element={<ContraPage />} />
+            <Route
+              path="/graph"
+              element={authStore.isAdmin ? <GraphPage /> : <Navigate to="/forbidden" replace />}
+            />
+            <Route path="/analogs" element={<Navigate to="/search" replace />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route
               path="/admin"
               element={authStore.isAdmin ? <AdminPage /> : <Navigate to="/forbidden" replace />}
@@ -195,20 +200,12 @@ const AppShell = observer(() => {
   );
 });
 
-/* ─── Root ────────────────────────────────────────────────────────── */
 const App = observer(() => (
   <BrowserRouter>
     <Routes>
-      <Route path="/login"    element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/*"
-        element={
-          <RequireAuth>
-            <AppShell />
-          </RequireAuth>
-        }
-      />
+      <Route path="/*" element={<RequireAuth><AppShell /></RequireAuth>} />
     </Routes>
   </BrowserRouter>
 ));

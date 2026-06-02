@@ -43,6 +43,11 @@ class AuthStore {
     return this.role === 'ADMIN';
   }
 
+  /** Редактирование своего профиля — только врач и фармацевт */
+  get canEditProfile() {
+    return this.role === 'DOCTOR' || this.role === 'PHARMACIST';
+  }
+
   async login(email: string, password: string) {
     this.loading = true;
     this.error = null;
@@ -55,6 +60,8 @@ class AuthStore {
       });
       setSession({ token: data.access_token, role: data.role, userId: data.userId, email });
       await this.fetchProfile();
+      const { drugsStore } = await import('./drugs.store');
+      drugsStore.loadCatalog();
       return true;
     } catch (e: any) {
       runInAction(() => {
@@ -78,6 +85,8 @@ class AuthStore {
       });
       setSession({ token: data.access_token, role: data.role, userId: data.userId, email });
       await this.fetchProfile();
+      const { drugsStore } = await import('./drugs.store');
+      drugsStore.loadCatalog();
       return true;
     } catch (e: any) {
       runInAction(() => {
@@ -96,12 +105,35 @@ class AuthStore {
     } catch {}
   }
 
+  async updateProfile(payload: {
+    fullName?: string;
+    organization?: string;
+    email?: string;
+    password?: string;
+  }) {
+    this.loading = true;
+    this.error = null;
+    try {
+      const { data } = await api.patch('/users/me', payload);
+      runInAction(() => { this.profile = data; });
+      return true;
+    } catch (e: any) {
+      runInAction(() => {
+        this.error = e.response?.data?.message || 'Не удалось сохранить профиль';
+      });
+      return false;
+    } finally {
+      runInAction(() => { this.loading = false; });
+    }
+  }
+
   logout() {
     this.token = null;
     this.role = null;
     this.userId = null;
     this.profile = null;
     clearSession();
+    import('./drugs.store').then(({ drugsStore }) => drugsStore.resetCatalog());
   }
 }
 

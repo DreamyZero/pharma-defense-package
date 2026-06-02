@@ -19,8 +19,8 @@ export declare class AuthService {
     profile(userId: number): Promise<{
         id: number;
         createdAt: Date;
-        fullName: string;
         email: string;
+        fullName: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;

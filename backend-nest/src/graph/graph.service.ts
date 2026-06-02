@@ -96,6 +96,7 @@ export class GraphService {
     const drugs = await this.prisma.drug.findMany({
       include: {
         substances: { include: { substance: true } },
+        indications: true,
         interactionA: { include: { drugB: true } },
         contraindications: true,
       },
@@ -119,6 +120,36 @@ export class GraphService {
           },
         );
         nodeCount++;
+
+        if (drug.pharmacologicalGroup) {
+          const groupId = `group_${drug.pharmacologicalGroup.replace(/\s+/g, '_').toLowerCase()}`;
+          await session.run(
+            `MERGE (g:PharmacologicalGroup {id: $id}) SET g.name = $name`,
+            { id: groupId, name: drug.pharmacologicalGroup },
+          );
+          await session.run(
+            `MATCH (d:Drug {id: $drugId}), (g:PharmacologicalGroup {id: $groupId})
+             MERGE (d)-[:BELONGS_TO]->(g)`,
+            { drugId: String(drug.id), groupId },
+          );
+          nodeCount++;
+          edgeCount++;
+        }
+
+        for (const ind of drug.indications) {
+          const indId = `ind_${ind.id}`;
+          await session.run(
+            `MERGE (i:Indication {id: $id}) SET i.name = $name`,
+            { id: indId, name: ind.name },
+          );
+          await session.run(
+            `MATCH (d:Drug {id: $drugId}), (i:Indication {id: $indId})
+             MERGE (d)-[:HAS_INDICATION]->(i)`,
+            { drugId: String(drug.id), indId },
+          );
+          nodeCount++;
+          edgeCount++;
+        }
 
         for (const ds of drug.substances) {
           await session.run(

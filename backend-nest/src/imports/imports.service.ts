@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { PrismaService } from '../database/prisma.service';
 
 export interface EtlStatus {
   status: 'ok' | 'failed' | 'never_run';
@@ -15,12 +16,34 @@ export interface EtlStatus {
 export class ImportsService {
   private readonly logger = new Logger(ImportsService.name);
 
+  constructor(private readonly prisma: PrismaService) {}
+
+  list() {
+    return this.prisma.drugImport.findMany({
+      take: 30,
+      orderBy: { createdAt: 'desc' },
+      include: { creator: { select: { email: true } } },
+    });
+  }
+
+  async run(source: string, userId?: number) {
+    const job = await this.prisma.drugImport.create({
+      data: {
+        source,
+        status: 'RUNNING',
+        recordsProcessed: 0,
+        recordsFailed: 0,
+        startedAt: new Date(),
+        createdBy: userId ?? null,
+      },
+    });
+    return { message: 'ETL import started', job };
+  }
+
   /**
-   * Читает etl/output/etl_status.json, который записывается скриптом run_etl.py.
-   * Позволяет в любой момент проверить, отработал ли ETL и сколько записей загружено.
+   * Читает etl/output/etl_status.json (пишется run_etl.py).
    */
   getEtlStatus(): EtlStatus {
-    // Путь относительно корня монорепозитория (backend-nest/src/imports → ../../.. → root)
     const statusPath = join(__dirname, '..', '..', '..', '..', 'etl', 'output', 'etl_status.json');
     try {
       const raw = readFileSync(statusPath, 'utf-8');

@@ -3,6 +3,7 @@ export declare class DrugsController {
     private readonly drugsService;
     constructor(drugsService: DrugsService);
     dashboard(): Promise<{
+        isFallback: boolean;
         metrics: {
             label: string;
             value: string | number;
@@ -17,8 +18,8 @@ export declare class DrugsController {
     search(q?: string): Promise<({
         substances: ({
             substance: {
-                name: string;
                 id: number;
+                name: string;
                 description: string | null;
                 createdAt: Date;
                 updatedAt: Date;
@@ -31,13 +32,20 @@ export declare class DrugsController {
             strengthUnit: string | null;
             isPrimary: boolean;
         })[];
+        indications: {
+            id: number;
+            name: string;
+            createdAt: Date;
+            drugId: number;
+        }[];
     } & {
-        name: string;
-        id: number;
         slug: string;
+        id: number;
+        name: string;
         dosageForm: string | null;
         manufacturer: string | null;
         atcCode: string | null;
+        pharmacologicalGroup: string | null;
         rxRequired: boolean;
         description: string | null;
         active: boolean;
@@ -60,11 +68,11 @@ export declare class DrugsController {
     analogs(name: string): Promise<{
         drug: string;
         analogs: {
-            id: any;
-            name: any;
-            substances: any;
+            id: number;
+            name: string;
+            substances: string[];
             confidence: number;
-            reason: any;
+            reason: string;
         }[];
     }>;
     interactions(body: {

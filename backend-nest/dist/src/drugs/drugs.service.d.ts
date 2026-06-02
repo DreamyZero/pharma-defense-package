@@ -3,6 +3,7 @@ import { PharmaRepository } from '../domain/pharma.repository';
 export declare class DrugsService {
     private repo;
     private prisma;
+    private readonly logger;
     constructor(repo: PharmaRepository, prisma: PrismaService);
     private localBySlug;
     private localByName;
@@ -10,8 +11,8 @@ export declare class DrugsService {
     search(q: string): Promise<({
         substances: ({
             substance: {
-                name: string;
                 id: number;
+                name: string;
                 description: string | null;
                 createdAt: Date;
                 updatedAt: Date;
@@ -24,13 +25,20 @@ export declare class DrugsService {
             strengthUnit: string | null;
             isPrimary: boolean;
         })[];
+        indications: {
+            id: number;
+            name: string;
+            createdAt: Date;
+            drugId: number;
+        }[];
     } & {
-        name: string;
-        id: number;
         slug: string;
+        id: number;
+        name: string;
         dosageForm: string | null;
         manufacturer: string | null;
         atcCode: string | null;
+        pharmacologicalGroup: string | null;
         rxRequired: boolean;
         description: string | null;
         active: boolean;
@@ -53,11 +61,11 @@ export declare class DrugsService {
     analogs(name: string): Promise<{
         drug: string;
         analogs: {
-            id: any;
-            name: any;
-            substances: any;
+            id: number;
+            name: string;
+            substances: string[];
             confidence: number;
-            reason: any;
+            reason: string;
         }[];
     }>;
     interactions(items: string[]): Promise<any[]>;
@@ -71,6 +79,7 @@ export declare class DrugsService {
         source?: undefined;
     }>;
     dashboard(): Promise<{
+        isFallback: boolean;
         metrics: {
             label: string;
             value: string | number;

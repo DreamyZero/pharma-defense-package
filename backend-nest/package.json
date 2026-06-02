@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "scripts": {
     "start:dev": "nest start --watch",
+    "prebuild": "prisma generate",
     "build": "nest build",
     "prisma:generate": "prisma generate",
-    "test": "jest"  
+    "test": "jest"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

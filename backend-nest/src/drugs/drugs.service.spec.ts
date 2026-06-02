@@ -198,7 +198,7 @@ describe('DrugsService', () => {
       mockPrisma.drugInteraction.count.mockRejectedValue(new Error('DB error'));
 
       const result = await service.dashboard();
-      expect(result.metrics[0].value).toBe('14 283');
+      expect(result.metrics[0].value).toBe('14 283*');
     });
   });
 });

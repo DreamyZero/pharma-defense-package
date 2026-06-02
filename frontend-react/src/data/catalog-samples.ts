@@ -1,8 +1,5 @@
-/**
- * Полный демо-каталог (40 препаратов) из etl/data/samples/drugs_catalog.json.
- * Используется, если API недоступен или вернул неполные данные.
- */
-import catalogRaw from '../../../etl/data/samples/drugs_catalog.json';
+
+import catalogRaw from './drugs_catalog.json';
 import type { DrugResult, InstructionMeta } from '../stores/drugs.store';
 
 type CatalogItem = {

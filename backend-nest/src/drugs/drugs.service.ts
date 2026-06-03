@@ -2,13 +2,18 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PharmaRepository } from '../domain/pharma.repository';
+import { AuditService } from '../audit/audit.service';
 import { drugs as localDrugs } from '../domain/pharma.data';
 
 @Injectable()
 export class DrugsService {
   private readonly logger = new Logger(DrugsService.name);
 
-  constructor(private repo: PharmaRepository, private prisma: PrismaService) {}
+  constructor(
+    private repo: PharmaRepository,
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -64,7 +69,6 @@ export class DrugsService {
     };
   }
 
-  /** Только полные карточки каталога (без заглушек аналогов / пустых записей). */
   private isCompleteCatalogDrug(drug: {
     registrationNumber?: string | null;
     manufacturer?: string | null;
@@ -122,9 +126,7 @@ export class DrugsService {
 
   async search(q: string) {
     const trimmed = (q || '').trim();
-    if (!trimmed) {
-      return this.catalog();
-    }
+    if (!trimmed) return this.catalog();
     if (trimmed.length < 2) return [];
     const n = trimmed.toLowerCase();
     try {
@@ -167,7 +169,7 @@ export class DrugsService {
     }));
   }
 
-  async getBySlug(slug: string) {
+  async getBySlug(slug: string, userId?: number, ipAddress?: string) {
     try {
       const dbDrug = await this.prisma.drug.findUnique({
         where: { slug },
@@ -181,6 +183,15 @@ export class DrugsService {
         },
       });
       if (dbDrug) {
+        await this.audit.log({
+          userId,
+          action: 'DRUG_VIEW',
+          entityType: 'Drug',
+          entityId: String(dbDrug.id),
+          newValues: { slug, name: dbDrug.name },
+          ipAddress,
+        }).catch(() => {});
+
         const local = this.localByName(dbDrug.name);
         const enriched = this.enrichDrugDetail(dbDrug, local);
         const indicationNames = (dbDrug.indications ?? []).map(i => i.name);
@@ -193,9 +204,18 @@ export class DrugsService {
     } catch (err) {
       this.logger.warn(`[getBySlug] Prisma недоступна для slug="${slug}". Причина: ${(err as Error).message}`);
     }
-    // full fallback from local data
     const local = this.localBySlug(slug);
     if (!local) return null;
+
+    await this.audit.log({
+      userId,
+      action: 'DRUG_VIEW',
+      entityType: 'Drug',
+      entityId: slug,
+      newValues: { slug, source: 'local' },
+      ipAddress,
+    }).catch(() => {});
+
     return {
       id: local.id,
       name: local.name,
@@ -224,7 +244,7 @@ export class DrugsService {
     };
   }
 
-  async analogs(name: string) {
+  async analogs(name: string, userId?: number, ipAddress?: string) {
     const n = name.trim().toLowerCase();
     try {
       const drug = await this.prisma.drug.findFirst({
@@ -269,11 +289,7 @@ export class DrugsService {
           : [];
 
         const merged = new Map<number, {
-          id: number;
-          name: string;
-          substances: string[];
-          confidence: number;
-          reason: string;
+          id: number; name: string; substances: string[]; confidence: number; reason: string;
         }>();
 
         for (const a of drug.analogsFrom) {
@@ -287,7 +303,6 @@ export class DrugsService {
             reason: a.reason || 'Запись в справочнике аналогов',
           });
         }
-
         for (const candidate of bySubstance) {
           if (merged.has(candidate.id)) continue;
           merged.set(candidate.id, {
@@ -300,18 +315,33 @@ export class DrugsService {
         }
 
         if (merged.size > 0) {
-          return {
-            drug: drug.name,
-            analogs: Array.from(merged.values()),
-          };
+          await this.audit.log({
+            userId,
+            action: 'ANALOG_SEARCH',
+            entityType: 'Drug',
+            entityId: String(drug.id),
+            newValues: { query: name, resultsCount: merged.size },
+            ipAddress,
+          }).catch(() => {});
+
+          return { drug: drug.name, analogs: Array.from(merged.values()) };
         }
       }
     } catch (err) {
       this.logger.warn(`[analogs] Prisma недоступна для "${name}". Причина: ${(err as Error).message}`);
     }
-    // fallback: use local data
     const local = this.localByName(name);
     if (!local) return { drug: name, analogs: [] };
+
+    await this.audit.log({
+      userId,
+      action: 'ANALOG_SEARCH',
+      entityType: 'Drug',
+      entityId: name,
+      newValues: { query: name, source: 'local' },
+      ipAddress,
+    }).catch(() => {});
+
     return {
       drug: local.name,
       analogs: (local.analogs || []).map((aName: string, i: number) => ({
@@ -324,7 +354,7 @@ export class DrugsService {
     };
   }
 
-  async interactions(items: string[]) {
+  async interactions(items: string[], userId?: number, ipAddress?: string) {
     if (items.length < 2) return [];
     try {
       const drugs = await this.prisma.drug.findMany({
@@ -348,13 +378,22 @@ export class DrugsService {
             });
           }
         }
-        if (results.some(r => r.mechanism || r.clinicalEffect)) return results;
+        if (results.some(r => r.mechanism || r.clinicalEffect)) {
+          await this.audit.log({
+            userId,
+            action: 'INTERACTION_CHECK',
+            entityType: 'Drug',
+            entityId: items.join(','),
+            newValues: { items, resultsCount: results.length },
+            ipAddress,
+          }).catch(() => {});
+          return results;
+        }
       }
     } catch (err) {
       this.logger.warn(`[interactions] Prisma недоступна. Причина: ${(err as Error).message}`);
     }
-    // fallback: cross-check local interaction data
-    return items.flatMap((a, i) =>
+    const result = items.flatMap((a, i) =>
       items.slice(i + 1).map(b => {
         const da = this.localByName(a);
         const db = this.localByName(b);
@@ -371,9 +410,20 @@ export class DrugsService {
         };
       }),
     );
+
+    await this.audit.log({
+      userId,
+      action: 'INTERACTION_CHECK',
+      entityType: 'Drug',
+      entityId: items.join(','),
+      newValues: { items, source: 'local' },
+      ipAddress,
+    }).catch(() => {});
+
+    return result;
   }
 
-  async contra(drug: string, age: number, context: string) {
+  async contra(drug: string, age: number, context: string, userId?: number, ipAddress?: string) {
     const warnings: string[] = [];
     try {
       const dbDrug = await this.prisma.drug.findFirst({
@@ -386,12 +436,19 @@ export class DrugsService {
           if (c.maxAge !== null && age > c.maxAge) warnings.push(`Возраст выше допустимого (макс. ${c.maxAge} лет): ${c.condition}`);
           if (c.context && context && c.context.toLowerCase() === context.toLowerCase()) warnings.push(`${c.condition}${c.note ? ' — ' + c.note : ''}`);
         }
+        await this.audit.log({
+          userId,
+          action: 'CONTRA_CHECK',
+          entityType: 'Drug',
+          entityId: String(dbDrug.id),
+          newValues: { drug: dbDrug.name, age, context, warningsCount: warnings.length },
+          ipAddress,
+        }).catch(() => {});
         if (warnings.length > 0) return { drug: dbDrug.name, warnings, source: 'database' };
       }
     } catch (err) {
       this.logger.warn(`[contra] Prisma недоступна для "${drug}". Причина: ${(err as Error).message}`);
     }
-    // fallback
     const local = this.localByName(drug);
     if (!local) return { drug: null, warnings: [] };
     const has = (part: string) =>
@@ -405,6 +462,16 @@ export class DrugsService {
     if (!context && warnings.length === 0) {
       local.contraindications.forEach(c => warnings.push(c));
     }
+
+    await this.audit.log({
+      userId,
+      action: 'CONTRA_CHECK',
+      entityType: 'Drug',
+      entityId: drug,
+      newValues: { drug, age, context, source: 'local', warningsCount: warnings.length },
+      ipAddress,
+    }).catch(() => {});
+
     return { drug: local.name, warnings, source: 'repository' };
   }
 

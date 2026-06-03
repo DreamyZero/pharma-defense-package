@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 export interface EtlStatus {
   status: 'ok' | 'failed' | 'never_run';
@@ -16,7 +17,10 @@ export interface EtlStatus {
 export class ImportsService {
   private readonly logger = new Logger(ImportsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   list() {
     return this.prisma.drugImport.findMany({
@@ -26,7 +30,7 @@ export class ImportsService {
     });
   }
 
-  async run(source: string, userId?: number) {
+  async run(source: string, userId?: number, ipAddress?: string) {
     const job = await this.prisma.drugImport.create({
       data: {
         source,
@@ -37,6 +41,16 @@ export class ImportsService {
         createdBy: userId ?? null,
       },
     });
+
+    await this.audit.log({
+      userId,
+      action: 'ETL_RUN',
+      entityType: 'DrugImport',
+      entityId: String(job.id),
+      newValues: { source, jobId: job.id },
+      ipAddress,
+    }).catch(() => {});
+
     return { message: 'ETL import started', job };
   }
 

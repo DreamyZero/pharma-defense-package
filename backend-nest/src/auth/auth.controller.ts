@@ -12,14 +12,14 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Регистрация нового пользователя' })
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  register(@Body() dto: RegisterDto, @Req() req: any) {
+    return this.authService.register(dto, req.ip);
   }
 
   @ApiOperation({ summary: 'Вход в систему' })
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: any) {
+    return this.authService.login(dto, req.ip);
   }
 
   @ApiBearerAuth()

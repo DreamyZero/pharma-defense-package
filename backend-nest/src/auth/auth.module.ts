@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { RolesGuard } from './guards/roles.guard';
       secret: process.env.JWT_SECRET || 'super-secret-key',
       signOptions: { expiresIn: '8h' },
     }),
+    AuditModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RolesGuard],

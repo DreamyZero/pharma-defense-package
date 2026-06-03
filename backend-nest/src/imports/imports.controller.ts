@@ -4,7 +4,7 @@ import {
   Get,
   HttpCode,
   Post,
-  Request,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -31,8 +31,15 @@ export class ImportsController {
   @ApiOperation({ summary: 'Запустить ETL импорт (только ADMIN)' })
   @Post('run')
   @HttpCode(200)
-  run(@Body() body: { source?: string }, @Request() req: { user?: { userId?: number } }) {
-    return this.importsService.run(body.source || 'manual_demo_job', req.user?.userId);
+  run(
+    @Body() body: { source?: string },
+    @Req() req: { user?: { userId?: number }; ip?: string },
+  ) {
+    return this.importsService.run(
+      body.source || 'manual_demo_job',
+      req.user?.userId,
+      req.ip,
+    );
   }
 
   @Roles('ADMIN')

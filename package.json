@@ -1,1 +1,1 @@
-{"name":"pharma-nextstep","private":true,"workspaces":["frontend-react","backend-nest"],"scripts":{"dev:frontend":"npm run dev -w frontend","dev:backend":"npm run start:dev -w backend-nest"}}
+{"name":"pharma-nextstep","private":true,"workspaces":["frontend-react","backend-nest"],"scripts":{"dev:frontend":"npm run dev -w frontend","dev:backend":"npm run start:dev -w backend-nest"},"devDependencies":{"@types/jest":"^30.0.0","jest":"^30.4.2","ts-jest":"^29.4.11"}}

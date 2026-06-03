@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 """
-Демонстрационный прогон ETL с наглядным отчётом.
-
 Запуск из корня репозитория:
   python etl/test_etl_demo.py
 
-или из etl/src:
-  python ../test_etl_demo.py
-
 Создаёт:
   - etl/output/etl_status.json
-  - etl/output/demo_report.html  (откройте в браузере)
+  - etl/output/demo_report.html 
 """
 from __future__ import annotations
 

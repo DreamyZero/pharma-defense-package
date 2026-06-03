@@ -10,7 +10,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "data/samples/drugs_catalog.json"
 
-# Торговое наименование → (дозировка взрослым, дозировка детям)
 DOSAGES: dict[str, tuple[str, str]] = {
     "Аспирин": (
         "75–500 мг 1–3 раза в сутки после еды; кардиопрофилактика — 75–100 мг 1 раз в сутки",

@@ -1,6 +1,3 @@
-#!/usr/bin/env bash
-# Полный ETL-пайплайн: parse → transform → load
-# Использование: bash etl/run_full_ingestion.sh
 
 set -e
 cd "$(dirname "$0")"

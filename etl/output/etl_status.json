@@ -1,7 +1,7 @@
 {
   "status": "ok",
-  "started_at": "2026-06-02T20:33:53.714490+00:00",
-  "finished_at": "2026-06-02T20:33:53.793853+00:00",
+  "started_at": "2026-06-03T21:06:49.211601+00:00",
+  "finished_at": "2026-06-03T21:06:49.282225+00:00",
   "source_file": "data/raw/drugs_raw.csv",
   "metrics": {
     "drugs": 40,

@@ -4,10 +4,30 @@
   "version": "1.0.0",
   "scripts": {
     "start:dev": "nest start --watch",
-    "prebuild": "prisma generate",
+    "prebuild": "prisma generate --schema=./prisma/schema.prisma",
     "build": "nest build",
-    "prisma:generate": "prisma generate",
-    "test": "jest"
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "test": "jest --config jest.config.js"
+  },
+  "prisma": {
+    "schema": "./prisma/schema.prisma",
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\.spec\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "tsconfig": "tsconfig.spec.json"
+      }
+    }
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
@@ -32,6 +52,7 @@
     "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.2.3",
     "@nestjs/testing": "^10.4.22",
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.9.0",
@@ -42,8 +63,5 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3"
-  },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
   }
 }

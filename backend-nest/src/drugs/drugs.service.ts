@@ -5,6 +5,20 @@ import { PharmaRepository } from '../domain/pharma.repository';
 import { AuditService } from '../audit/audit.service';
 import { drugs as localDrugs } from '../domain/pharma.data';
 
+type LocalDrug = {
+  id: number;
+  name: string;
+  substance: string;
+  atc: string;
+  group: string;
+  synonyms?: string[];
+  indications: string[];
+  sideEffects?: string[];
+  contraindications: string[];
+  analogs?: string[];
+  interactions?: Array<{ with: string; risk: string; note: string }>;
+};
+
 @Injectable()
 export class DrugsService {
   private readonly logger = new Logger(DrugsService.name);
@@ -15,59 +29,56 @@ export class DrugsService {
     private audit: AuditService,
   ) {}
 
-  // ── helpers ────────────────────────────────────────────────────────────────
+  // ── helpers ───────────────────────────────────────────────────────────────
 
-  private localBySlug(slug: string) {
-    return localDrugs.find(d => d.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase());
-  }
-
-  private localByName(name: string) {
-    const n = name.trim().toLowerCase();
-    return localDrugs.find(
-      d => d.name.toLowerCase() === n ||
-        d.substance.toLowerCase() === n ||
-        (d.synonyms || []).some((s: string) => s.toLowerCase() === n),
+  private localBySlug(slug: string): LocalDrug | undefined {
+    return (localDrugs as LocalDrug[]).find(
+      d => d.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase(),
     );
   }
 
-  private enrichDrugDetail(dbDrug: any, local: any) {
+  private localByName(name: string): LocalDrug | undefined {
+    const n = name.trim().toLowerCase();
+    return (localDrugs as LocalDrug[]).find(
+      d =>
+        d.name.toLowerCase() === n ||
+        d.substance.toLowerCase() === n ||
+        (d.synonyms ?? []).some((s: string) => s.toLowerCase() === n),
+    );
+  }
+
+  private enrichDrugDetail(dbDrug: Record<string, any>, local: LocalDrug | undefined): Record<string, any> {
     if (!local) return dbDrug;
     return {
       ...dbDrug,
-      description: dbDrug.description ||
+      description:
+        dbDrug['description'] ||
         `${local.group}. Показания: ${local.indications.join(', ')}. ` +
-        `Побочные эффекты: ${(local.sideEffects || []).join(', ')}.`,
-      dosageForm: dbDrug.dosageForm || 'Таблетки',
-      contraindications: dbDrug.contraindications?.length
-        ? dbDrug.contraindications
-        : (local.contraindications || []).map((c: string) => ({ condition: c })),
-      analogsFrom: dbDrug.analogsFrom?.length
-        ? dbDrug.analogsFrom
-        : (local.analogs || []).map((name: string, i: number) => ({
-          targetDrug: { id: -(i + 1), name },
-          confidence: 90,
-          reason: 'Одно действующее вещество / группа',
-        })),
-      interactionA: dbDrug.interactionA?.length
-        ? dbDrug.interactionA
-        : (local.interactions || []).map((ix: any) => ({
-          drugB: { name: ix.with },
-          severity: ix.risk,
-          clinicalEffect: ix.note,
-          recommendation: ix.note,
-        })),
-      interactionB: dbDrug.interactionB || [],
+          `Побочные эффекты: ${(local.sideEffects ?? []).join(', ')}.`,
+      dosageForm: dbDrug['dosageForm'] || 'Таблетки',
+      contraindications: (dbDrug['contraindications'] as any[])?.length
+        ? dbDrug['contraindications']
+        : (local.contraindications).map((c: string) => ({ condition: c })),
+      analogsFrom: (dbDrug['analogsFrom'] as any[])?.length
+        ? dbDrug['analogsFrom']
+        : (local.analogs ?? []).map((n: string, i: number) => ({
+            targetDrug: { id: -(i + 1), name: n },
+            confidence: 90,
+            reason: 'Одно действующее вещество / группа',
+          })),
+      interactionA: (dbDrug['interactionA'] as any[])?.length
+        ? dbDrug['interactionA']
+        : (local.interactions ?? []).map((ix: { with: string; risk: string; note: string }) => ({
+            drugB: { name: ix.with },
+            severity: ix.risk,
+            clinicalEffect: ix.note,
+            recommendation: ix.note,
+          })),
+      interactionB: dbDrug['interactionB'] ?? [],
     };
   }
 
-  // ── routes ─────────────────────────────────────────────────────────────────
-
-  private catalogInclude() {
-    return {
-      substances: { include: { substance: true } },
-      indications: { orderBy: { name: 'asc' as const } },
-    };
-  }
+  // ── routes ────────────────────────────────────────────────────────────────
 
   private isCompleteCatalogDrug(drug: {
     registrationNumber?: string | null;
@@ -76,7 +87,7 @@ export class DrugsService {
     pharmacologicalGroup?: string | null;
     description?: string | null;
     instructionMeta?: unknown;
-    indications?: { name: string }[];
+    indications?: Array<{ name: string }>;
   }): boolean {
     if (!drug.registrationNumber?.trim()) return false;
     if (!drug.manufacturer?.trim()) return false;
@@ -85,13 +96,12 @@ export class DrugsService {
     if (!drug.description?.trim() || drug.description.length < 30) return false;
     const meta = drug.instructionMeta as Record<string, unknown> | null;
     if (!meta || typeof meta !== 'object') return false;
-    const dosage = String(meta.dosageAdult || '').trim();
+    const dosage = String(meta['dosageAdult'] ?? '').trim();
     if (!dosage || dosage === 'По инструкции') return false;
-    const indications =
-      (Array.isArray(meta.indicationsList) && meta.indicationsList.length > 0) ||
+    const hasIndications =
+      (Array.isArray(meta['indicationsList']) && (meta['indicationsList'] as unknown[]).length > 0) ||
       (drug.indications?.length ?? 0) > 0;
-    if (!indications) return false;
-    return true;
+    return hasIndications;
   }
 
   async catalog() {
@@ -102,7 +112,10 @@ export class DrugsService {
           registrationNumber: { not: null },
           instructionMeta: { not: Prisma.DbNull },
         },
-        include: this.catalogInclude(),
+        include: {
+          substances: { include: { substance: true } },
+          indications: true,
+        },
         orderBy: { name: 'asc' },
         take: 100,
       });
@@ -111,7 +124,7 @@ export class DrugsService {
     } catch (err) {
       this.logger.warn(`[catalog] Prisma недоступна. ${(err as Error).message}`);
     }
-    return this.repo.all().map(d => ({
+    return (localDrugs as LocalDrug[]).map(d => ({
       id: d.id,
       name: d.name,
       slug: d.name.toLowerCase().replace(/\s+/g, '-'),
@@ -120,12 +133,12 @@ export class DrugsService {
       pharmacologicalGroup: d.group,
       dosageForm: 'Таблетки',
       substances: [{ substance: { name: d.substance } }],
-      indications: (d.indications || []).map((name: string) => ({ name })),
+      indications: d.indications.map((name: string) => ({ name })),
     }));
   }
 
   async search(q: string) {
-    const trimmed = (q || '').trim();
+    const trimmed = (q ?? '').trim();
     if (!trimmed) return this.catalog();
     if (trimmed.length < 2) return [];
     const n = trimmed.toLowerCase();
@@ -156,9 +169,9 @@ export class DrugsService {
       const complete = drugs.filter(d => this.isCompleteCatalogDrug(d));
       if (complete.length > 0) return complete;
     } catch (err) {
-      this.logger.warn(`[search] Prisma недоступна, переключаемся на локальные данные. Причина: ${(err as Error).message}`);
+      this.logger.warn(`[search] Prisma недоступна. Причина: ${(err as Error).message}`);
     }
-    return this.repo.search(q).map(d => ({
+    return (localDrugs as LocalDrug[]).map(d => ({
       id: d.id,
       name: d.name,
       slug: d.name.toLowerCase().replace(/\s+/g, '-'),
@@ -193,11 +206,11 @@ export class DrugsService {
         }).catch(() => {});
 
         const local = this.localByName(dbDrug.name);
-        const enriched = this.enrichDrugDetail(dbDrug, local);
-        const indicationNames = (dbDrug.indications ?? []).map(i => i.name);
-        if (!enriched.description && indicationNames.length > 0) {
+        const enriched = this.enrichDrugDetail(dbDrug as unknown as Record<string, any>, local);
+        const indicationNames = dbDrug.indications.map((i: { name: string }) => i.name);
+        if (!enriched['description'] && indicationNames.length > 0) {
           const group = dbDrug.pharmacologicalGroup ?? '';
-          enriched.description = `${group ? `${group}. ` : ''}Показания: ${indicationNames.join(', ')}.`.trim();
+          enriched['description'] = `${group ? `${group}. ` : ''}Показания: ${indicationNames.join(', ')}.`.trim();
         }
         return enriched;
       }
@@ -226,15 +239,15 @@ export class DrugsService {
       dosageForm: 'Таблетки',
       description:
         `${local.group}. Показания: ${local.indications.join(', ')}. ` +
-        `Побочные эффекты: ${(local.sideEffects || []).join(', ')}.`,
+        `Побочные эффекты: ${(local.sideEffects ?? []).join(', ')}.`,
       substances: [{ substance: { name: local.substance } }],
-      contraindications: (local.contraindications || []).map((c: string) => ({ condition: c })),
-      analogsFrom: (local.analogs || []).map((name: string, i: number) => ({
-        targetDrug: { id: -(i + 1), name },
+      contraindications: local.contraindications.map((c: string) => ({ condition: c })),
+      analogsFrom: (local.analogs ?? []).map((n: string, i: number) => ({
+        targetDrug: { id: -(i + 1), name: n },
         confidence: 90,
         reason: 'Одно действующее вещество / группа',
       })),
-      interactionA: (local.interactions || []).map((ix: any) => ({
+      interactionA: (local.interactions ?? []).map((ix: { with: string; risk: string; note: string }) => ({
         drugB: { name: ix.with },
         severity: ix.risk,
         clinicalEffect: ix.note,
@@ -276,31 +289,27 @@ export class DrugsService {
               where: {
                 id: { not: drug.id },
                 active: true,
-                substances: {
-                  some: {
-                    isPrimary: true,
-                    substanceId: primarySubstance.substanceId,
-                  },
-                },
+                substances: { some: { isPrimary: true, substanceId: primarySubstance.substanceId } },
               },
               include: { substances: { include: { substance: true } } },
               take: 30,
             })
           : [];
 
-        const merged = new Map<number, {
-          id: number; name: string; substances: string[]; confidence: number; reason: string;
-        }>();
+        const merged = new Map<number, { id: number; name: string; substances: string[]; confidence: number; reason: string }>();
 
         for (const a of drug.analogsFrom) {
           merged.set(a.targetDrug.id, {
             id: a.targetDrug.id,
             name: a.targetDrug.name,
             substances: a.targetDrug.substances.map(s => s.substance.name),
-            confidence: a.confidence != null
-              ? (a.confidence <= 1 ? Math.round(a.confidence * 100) : Math.round(a.confidence))
-              : 90,
-            reason: a.reason || 'Запись в справочнике аналогов',
+            confidence:
+              a.confidence != null
+                ? a.confidence <= 1
+                  ? Math.round(a.confidence * 100)
+                  : Math.round(a.confidence)
+                : 90,
+            reason: a.reason ?? 'Запись в справочнике аналогов',
           });
         }
         for (const candidate of bySubstance) {
@@ -310,7 +319,7 @@ export class DrugsService {
             name: candidate.name,
             substances: candidate.substances.map(s => s.substance.name),
             confidence: 95,
-            reason: `Одно действующее вещество: ${primarySubstance?.substance.name}`,
+            reason: `Одно действующее вещество: ${primarySubstance?.substance.name ?? ''}`,
           });
         }
 
@@ -323,7 +332,6 @@ export class DrugsService {
             newValues: { query: name, resultsCount: merged.size },
             ipAddress,
           }).catch(() => {});
-
           return { drug: drug.name, analogs: Array.from(merged.values()) };
         }
       }
@@ -344,7 +352,7 @@ export class DrugsService {
 
     return {
       drug: local.name,
-      analogs: (local.analogs || []).map((aName: string, i: number) => ({
+      analogs: (local.analogs ?? []).map((aName: string, i: number) => ({
         id: -(i + 1),
         name: aName,
         substances: [local.substance],
@@ -358,27 +366,32 @@ export class DrugsService {
     if (items.length < 2) return [];
     try {
       const drugs = await this.prisma.drug.findMany({
-        where: { name: { in: items, mode: 'insensitive' } as any },
+        where: { name: { in: items, mode: 'insensitive' } },
         select: { id: true, name: true },
       });
       if (drugs.length >= 2) {
-        const results: any[] = [];
+        const results: Array<{
+          a: string; b: string; risk: string;
+          mechanism: string | null; clinicalEffect: string | null; recommendation: string;
+        }> = [];
         for (let i = 0; i < drugs.length; i++) {
           for (let j = i + 1; j < drugs.length; j++) {
-            const a = drugs[i], b = drugs[j];
+            const a = drugs[i];
+            const b = drugs[j];
             const interaction = await this.prisma.drugInteraction.findFirst({
               where: { OR: [{ drugAId: a.id, drugBId: b.id }, { drugAId: b.id, drugBId: a.id }] },
             });
             results.push({
-              a: a.name, b: b.name,
-              risk: interaction?.severity?.toLowerCase() || 'low',
-              mechanism: interaction?.mechanism || null,
-              clinicalEffect: interaction?.clinicalEffect || null,
-              recommendation: interaction?.recommendation || 'Значимое взаимодействие не найдено',
+              a: a.name,
+              b: b.name,
+              risk: interaction?.severity?.toLowerCase() ?? 'low',
+              mechanism: interaction?.mechanism ?? null,
+              clinicalEffect: interaction?.clinicalEffect ?? null,
+              recommendation: interaction?.recommendation ?? 'Значимое взаимодействие не найдено',
             });
           }
         }
-        if (results.some(r => r.mechanism || r.clinicalEffect)) {
+        if (results.some(r => r.mechanism ?? r.clinicalEffect)) {
           await this.audit.log({
             userId,
             action: 'INTERACTION_CHECK',
@@ -393,20 +406,24 @@ export class DrugsService {
     } catch (err) {
       this.logger.warn(`[interactions] Prisma недоступна. Причина: ${(err as Error).message}`);
     }
-    const result = items.flatMap((a, i) =>
-      items.slice(i + 1).map(b => {
+    const result = items.flatMap((a: string, i: number) =>
+      items.slice(i + 1).map((b: string) => {
         const da = this.localByName(a);
         const db = this.localByName(b);
         const hit =
-          (da?.interactions || []).find((x: any) => x.with.toLowerCase() === (db?.name || b).toLowerCase()) ||
-          (db?.interactions || []).find((x: any) => x.with.toLowerCase() === (da?.name || a).toLowerCase());
+          (da?.interactions ?? []).find((x: { with: string; risk: string; note: string }) =>
+            x.with.toLowerCase() === (db?.name ?? b).toLowerCase(),
+          ) ??
+          (db?.interactions ?? []).find((x: { with: string; risk: string; note: string }) =>
+            x.with.toLowerCase() === (da?.name ?? a).toLowerCase(),
+          );
         return {
-          a: da?.name || a,
-          b: db?.name || b,
-          risk: hit?.risk || 'low',
-          mechanism: null,
-          clinicalEffect: hit?.note || null,
-          recommendation: hit?.note || 'Значимое взаимодействие не найдено в базе',
+          a: da?.name ?? a,
+          b: db?.name ?? b,
+          risk: hit?.risk ?? 'low',
+          mechanism: null as string | null,
+          clinicalEffect: hit?.note ?? null,
+          recommendation: hit?.note ?? 'Значимое взаимодействие не найдено в базе',
         };
       }),
     );
@@ -434,7 +451,8 @@ export class DrugsService {
         for (const c of dbDrug.contraindications) {
           if (c.minAge !== null && age < c.minAge) warnings.push(`Возраст ниже допустимого (мин. ${c.minAge} лет): ${c.condition}`);
           if (c.maxAge !== null && age > c.maxAge) warnings.push(`Возраст выше допустимого (макс. ${c.maxAge} лет): ${c.condition}`);
-          if (c.context && context && c.context.toLowerCase() === context.toLowerCase()) warnings.push(`${c.condition}${c.note ? ' — ' + c.note : ''}`);
+          if (c.context && context && c.context.toLowerCase() === context.toLowerCase())
+            warnings.push(`${c.condition}${c.note ? ' — ' + c.note : ''}`);
         }
         await this.audit.log({
           userId,
@@ -451,17 +469,14 @@ export class DrugsService {
     }
     const local = this.localByName(drug);
     if (!local) return { drug: null, warnings: [] };
-    const has = (part: string) =>
-      local.contraindications.some(c => c.toLowerCase().includes(part));
+    const has = (part: string) => local.contraindications.some((c: string) => c.toLowerCase().includes(part));
     if (age < 18 && has('детск')) warnings.push('Противопоказан в детском возрасте');
     if (context === 'pregnancy' && has('беремен')) warnings.push('Противопоказан при беременности');
     if (context === 'lactation' && has('лактац')) warnings.push('Противопоказан при кормлении грудью');
     if (context === 'renal' && has('почечн')) warnings.push('Противопоказан при почечной недостаточности');
     if (context === 'hepatic' && has('печен')) warnings.push('Противопоказан при печёночной недостаточности');
     if (context === 'pediatric' && has('детск')) warnings.push('Противопоказан в детском возрасте');
-    if (!context && warnings.length === 0) {
-      local.contraindications.forEach(c => warnings.push(c));
-    }
+    if (!context && warnings.length === 0) local.contraindications.forEach((c: string) => warnings.push(c));
 
     await this.audit.log({
       userId,
@@ -481,8 +496,8 @@ export class DrugsService {
       this.prisma.substance.count(),
       this.prisma.drugInteraction.count(),
     ]).catch((err) => {
-      this.logger.warn(`[dashboard] Prisma недоступна, возвращаем fallback-метрики. Причина: ${(err as Error).message}`);
-      return [0, 0, 0];
+      this.logger.warn(`[dashboard] Prisma недоступна. Причина: ${(err as Error).message}`);
+      return [0, 0, 0] as [number, number, number];
     });
 
     const isFallback = drugsCount === 0 && substancesCount === 0 && interactionsCount === 0;

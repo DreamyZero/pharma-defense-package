@@ -11,10 +11,15 @@ const common_1 = require("@nestjs/common");
 const drugs_controller_1 = require("./drugs.controller");
 const drugs_service_1 = require("./drugs.service");
 const pharma_repository_1 = require("../domain/pharma.repository");
+const audit_module_1 = require("../audit/audit.module");
 let DrugsModule = class DrugsModule {
 };
 exports.DrugsModule = DrugsModule;
 exports.DrugsModule = DrugsModule = __decorate([
-    (0, common_1.Module)({ controllers: [drugs_controller_1.DrugsController], providers: [drugs_service_1.DrugsService, pharma_repository_1.PharmaRepository] })
+    (0, common_1.Module)({
+        imports: [audit_module_1.AuditModule],
+        controllers: [drugs_controller_1.DrugsController],
+        providers: [drugs_service_1.DrugsService, pharma_repository_1.PharmaRepository],
+    })
 ], DrugsModule);
 //# sourceMappingURL=drugs.module.js.map

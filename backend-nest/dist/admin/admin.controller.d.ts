@@ -6,29 +6,13 @@ export declare class AdminController {
     constructor(adminService: AdminService);
     users(): import(".prisma/client").Prisma.PrismaPromise<{
         id: number;
+        createdAt: Date;
         fullName: string;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     }[]>;
-    audit(): import(".prisma/client").Prisma.PrismaPromise<({
-        user: {
-            fullName: string;
-            email: string;
-        } | null;
-    } & {
-        id: number;
-        createdAt: Date;
-        userId: number | null;
-        action: string;
-        entityType: string | null;
-        entityId: string | null;
-        oldValues: import("@prisma/client/runtime/library").JsonValue | null;
-        newValues: import("@prisma/client/runtime/library").JsonValue | null;
-        ipAddress: string | null;
-    })[]>;
     etl(): import(".prisma/client").Prisma.PrismaPromise<({
         creator: {
             email: string;
@@ -48,18 +32,28 @@ export declare class AdminController {
     })[]>;
     setRole(id: number, body: {
         role: Role;
+    }, req: {
+        user?: {
+            userId?: number;
+        };
+        ip?: string;
     }): Promise<{
         id: number;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
     }>;
-    updateUser(id: number, dto: AdminUpdateUserDto): Promise<{
+    updateUser(id: number, dto: AdminUpdateUserDto, req: {
+        user?: {
+            userId?: number;
+        };
+        ip?: string;
+    }): Promise<{
         id: number;
+        createdAt: Date;
         fullName: string;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     } | undefined>;
 }

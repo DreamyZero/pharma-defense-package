@@ -38,7 +38,7 @@ export class DrugsController {
   @Roles('PHARMACIST', 'DOCTOR', 'ADMIN')
   @Get('drugs/search')
   search(@Query('q') q = '', @Req() req: any) {
-    return this.drugsService.search(q);
+    return this.drugsService.search(q, req.user?.userId, req.ip);
   }
 
   @ApiBearerAuth()

@@ -25,13 +25,12 @@ let AdminController = class AdminController {
         this.adminService = adminService;
     }
     users() { return this.adminService.users(); }
-    audit() { return this.adminService.audit(); }
     etl() { return this.adminService.etl(); }
-    setRole(id, body) {
-        return this.adminService.setRole(id, body.role);
+    setRole(id, body, req) {
+        return this.adminService.setRole(id, body.role, req.user?.userId, req.ip);
     }
-    updateUser(id, dto) {
-        return this.adminService.updateUser(id, dto);
+    updateUser(id, dto, req) {
+        return this.adminService.updateUser(id, dto, req.user?.userId, req.ip);
     }
 };
 exports.AdminController = AdminController;
@@ -42,13 +41,6 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "users", null);
-__decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'Журнал аудита' }),
-    (0, common_1.Get)('audit'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], AdminController.prototype, "audit", null);
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Список ETL-импортов' }),
     (0, common_1.Get)('etl'),
@@ -61,8 +53,9 @@ __decorate([
     (0, common_1.Patch)('users/:id/role'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, Object, Object]),
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "setRole", null);
 __decorate([
@@ -70,8 +63,9 @@ __decorate([
     (0, common_1.Patch)('users/:id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, admin_update_user_dto_1.AdminUpdateUserDto]),
+    __metadata("design:paramtypes", [Number, admin_update_user_dto_1.AdminUpdateUserDto, Object]),
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "updateUser", null);
 exports.AdminController = AdminController = __decorate([

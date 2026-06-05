@@ -42,16 +42,21 @@ export class ImportsService {
       },
     });
 
-    await this.audit.log({
+    const auditEntry = await this.audit.log({
       userId,
       action: 'ETL_RUN',
       entityType: 'DrugImport',
       entityId: String(job.id),
       newValues: { source, jobId: job.id },
       ipAddress,
-    }).catch(() => {});
+    });
 
-    return { message: 'ETL import started', job };
+    await this.prisma.drugImport.update({
+      where: { id: job.id },
+      data: { auditId: auditEntry.id },
+    });
+
+    return { message: 'ETL import started', job: { ...job, auditId: auditEntry.id } };
   }
 
   /**

@@ -11,7 +11,6 @@ const common_1 = require("@nestjs/common");
 const graph_controller_1 = require("./graph.controller");
 const graph_service_1 = require("./graph.service");
 const neo4j_module_1 = require("./neo4j/neo4j.module");
-const prisma_service_1 = require("../database/prisma.service");
 let GraphModule = class GraphModule {
 };
 exports.GraphModule = GraphModule;
@@ -19,7 +18,7 @@ exports.GraphModule = GraphModule = __decorate([
     (0, common_1.Module)({
         imports: [neo4j_module_1.Neo4jModule],
         controllers: [graph_controller_1.GraphController],
-        providers: [graph_service_1.GraphService, prisma_service_1.PrismaService],
+        providers: [graph_service_1.GraphService],
     })
 ], GraphModule);
 //# sourceMappingURL=graph.module.js.map

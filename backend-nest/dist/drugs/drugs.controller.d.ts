@@ -15,7 +15,7 @@ export declare class DrugsController {
             time: string;
         }[];
     }>;
-    catalog(): Promise<({
+    catalog(req: any): Promise<({
         substances: ({
             substance: {
                 id: number;
@@ -43,14 +43,14 @@ export declare class DrugsController {
         createdAt: Date;
         updatedAt: Date;
         name: string;
-        slug: string;
+        description: string | null;
         dosageForm: string | null;
+        slug: string;
         manufacturer: string | null;
         atcCode: string | null;
         pharmacologicalGroup: string | null;
         registrationNumber: string | null;
         rxRequired: boolean;
-        description: string | null;
         instructionMeta: import("@prisma/client/runtime/library").JsonValue | null;
         active: boolean;
     })[] | {
@@ -70,7 +70,7 @@ export declare class DrugsController {
             name: string;
         }[];
     }[]>;
-    search(q?: string): Promise<({
+    search(q: string | undefined, req: any): Promise<({
         substances: ({
             substance: {
                 id: number;
@@ -98,14 +98,14 @@ export declare class DrugsController {
         createdAt: Date;
         updatedAt: Date;
         name: string;
-        slug: string;
+        description: string | null;
         dosageForm: string | null;
+        slug: string;
         manufacturer: string | null;
         atcCode: string | null;
         pharmacologicalGroup: string | null;
         registrationNumber: string | null;
         rxRequired: boolean;
-        description: string | null;
         instructionMeta: import("@prisma/client/runtime/library").JsonValue | null;
         active: boolean;
     })[] | {
@@ -121,8 +121,8 @@ export declare class DrugsController {
             };
         }[];
     }[]>;
-    getBySlug(slug: string): Promise<any>;
-    analogs(name: string): Promise<{
+    getBySlug(slug: string, req: any): Promise<Record<string, any> | null>;
+    analogs(name: string, req: any): Promise<{
         drug: string;
         analogs: {
             id: number;
@@ -134,12 +134,19 @@ export declare class DrugsController {
     }>;
     interactions(body: {
         items: string[];
-    }): Promise<any[]>;
+    }, req: any): Promise<{
+        a: string;
+        b: string;
+        risk: string;
+        mechanism: string | null;
+        clinicalEffect: string | null;
+        recommendation: string;
+    }[]>;
     contra(body: {
         drug: string;
         age: number;
         context: string;
-    }): Promise<{
+    }, req: any): Promise<{
         drug: string;
         warnings: string[];
         source: string;

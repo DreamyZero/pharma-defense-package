@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, ParseIntPipe, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,10 +18,6 @@ export class AdminController {
   @Get('users')
   users() { return this.adminService.users(); }
 
-  @ApiOperation({ summary: 'Журнал аудита' })
-  @Get('audit')
-  audit() { return this.adminService.audit(); }
-
   @ApiOperation({ summary: 'Список ETL-импортов' })
   @Get('etl')
   etl() { return this.adminService.etl(); }
@@ -31,8 +27,9 @@ export class AdminController {
   setRole(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { role: Role },
+    @Req() req: { user?: { userId?: number }; ip?: string },
   ) {
-    return this.adminService.setRole(id, body.role);
+    return this.adminService.setRole(id, body.role, req.user?.userId, req.ip);
   }
 
   @ApiOperation({ summary: 'Обновить email и/или пароль пользователя' })
@@ -40,7 +37,8 @@ export class AdminController {
   updateUser(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AdminUpdateUserDto,
+    @Req() req: { user?: { userId?: number }; ip?: string },
   ) {
-    return this.adminService.updateUser(id, dto);
+    return this.adminService.updateUser(id, dto, req.user?.userId, req.ip);
   }
 }

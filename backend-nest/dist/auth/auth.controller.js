@@ -23,11 +23,11 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    register(dto) {
-        return this.authService.register(dto);
+    register(dto, req) {
+        return this.authService.register(dto, req.ip);
     }
-    login(dto) {
-        return this.authService.login(dto);
+    login(dto, req) {
+        return this.authService.login(dto, req.ip);
     }
     profile(req) {
         return this.authService.profile(req.user.userId);
@@ -38,16 +38,18 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Регистрация нового пользователя' }),
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
+    __metadata("design:paramtypes", [register_dto_1.RegisterDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Вход в систему' }),
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
 __decorate([

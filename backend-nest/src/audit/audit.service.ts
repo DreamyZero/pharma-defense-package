@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
 export type AuditRowDto = {
@@ -11,6 +11,8 @@ export type AuditRowDto = {
 
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async list(take = 100): Promise<AuditRowDto[]> {
@@ -38,6 +40,23 @@ export class AuditService {
     newValues?: any;
     ipAddress?: string;
   }) {
-    return this.prisma.auditLog.create({ data });
+    try {
+      return await this.prisma.auditLog.create({ data });
+    } catch (err) {
+      this.logger.error(
+        `Не удалось записать аудит (${data.action}): ${(err as Error).message}`,
+        (err as Error).stack,
+      );
+      throw err;
+    }
+  }
+
+  /** Запись аудита без прерывания основного сценария (поиск, карточки). */
+  async logSafe(data: Parameters<AuditService['log']>[0]) {
+    try {
+      await this.log(data);
+    } catch {
+      /* ошибка уже залогирована в log() */
+    }
   }
 }

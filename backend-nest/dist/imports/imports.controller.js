@@ -27,7 +27,7 @@ let ImportsController = class ImportsController {
         return this.importsService.list();
     }
     run(body, req) {
-        return this.importsService.run(body.source || 'manual_demo_job', req.user?.userId);
+        return this.importsService.run(body.source || 'manual_demo_job', req.user?.userId, req.ip);
     }
     getStatus() {
         return this.importsService.getEtlStatus();
@@ -48,7 +48,7 @@ __decorate([
     (0, common_1.Post)('run'),
     (0, common_1.HttpCode)(200),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Request)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)

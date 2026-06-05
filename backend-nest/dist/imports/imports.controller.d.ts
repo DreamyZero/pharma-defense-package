@@ -25,9 +25,11 @@ export declare class ImportsController {
         user?: {
             userId?: number;
         };
+        ip?: string;
     }): Promise<{
         message: string;
         job: {
+            auditId: number;
             id: number;
             createdAt: Date;
             source: string;
@@ -38,7 +40,6 @@ export declare class ImportsController {
             completedAt: Date | null;
             errorLog: string | null;
             createdBy: number | null;
-            auditId: number | null;
         };
     }>;
     getStatus(): import("./imports.service").EtlStatus;

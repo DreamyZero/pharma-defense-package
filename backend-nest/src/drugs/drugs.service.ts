@@ -137,7 +137,7 @@ export class DrugsService {
     }));
   }
 
-  async search(q: string) {
+  async search(q: string, userId?: number, ipAddress?: string) {
     const trimmed = (q ?? '').trim();
     if (!trimmed) return this.catalog();
     if (trimmed.length < 2) return [];
@@ -167,11 +167,35 @@ export class DrugsService {
         take: 50,
       });
       const complete = drugs.filter(d => this.isCompleteCatalogDrug(d));
-      if (complete.length > 0) return complete;
+      if (complete.length > 0) {
+        await this.audit.logSafe({
+          userId,
+          action: 'DRUG_SEARCH',
+          entityType: 'Drug',
+          entityId: trimmed,
+          newValues: { query: trimmed, resultsCount: complete.length, source: 'database' },
+          ipAddress,
+        });
+        return complete;
+      }
     } catch (err) {
       this.logger.warn(`[search] Prisma недоступна. Причина: ${(err as Error).message}`);
     }
-    return (localDrugs as LocalDrug[]).map(d => ({
+    const localResults = (localDrugs as LocalDrug[]).filter(d =>
+      d.name.toLowerCase().includes(n) ||
+      d.substance.toLowerCase().includes(n) ||
+      (d.synonyms ?? []).some(s => s.toLowerCase().includes(n)) ||
+      d.indications.some(i => i.toLowerCase().includes(n)),
+    );
+    await this.audit.logSafe({
+      userId,
+      action: 'DRUG_SEARCH',
+      entityType: 'Drug',
+      entityId: trimmed,
+      newValues: { query: trimmed, resultsCount: localResults.length, source: 'local' },
+      ipAddress,
+    });
+    return localResults.map(d => ({
       id: d.id,
       name: d.name,
       slug: d.name.toLowerCase().replace(/\s+/g, '-'),
@@ -196,14 +220,14 @@ export class DrugsService {
         },
       });
       if (dbDrug) {
-        await this.audit.log({
+        await this.audit.logSafe({
           userId,
           action: 'DRUG_VIEW',
           entityType: 'Drug',
           entityId: String(dbDrug.id),
           newValues: { slug, name: dbDrug.name },
           ipAddress,
-        }).catch(() => {});
+        });
 
         const local = this.localByName(dbDrug.name);
         const enriched = this.enrichDrugDetail(dbDrug as unknown as Record<string, any>, local);
@@ -220,14 +244,14 @@ export class DrugsService {
     const local = this.localBySlug(slug);
     if (!local) return null;
 
-    await this.audit.log({
+    await this.audit.logSafe({
       userId,
       action: 'DRUG_VIEW',
       entityType: 'Drug',
       entityId: slug,
       newValues: { slug, source: 'local' },
       ipAddress,
-    }).catch(() => {});
+    });
 
     return {
       id: local.id,
@@ -324,14 +348,14 @@ export class DrugsService {
         }
 
         if (merged.size > 0) {
-          await this.audit.log({
+          await this.audit.logSafe({
             userId,
             action: 'ANALOG_SEARCH',
             entityType: 'Drug',
             entityId: String(drug.id),
             newValues: { query: name, resultsCount: merged.size },
             ipAddress,
-          }).catch(() => {});
+          });
           return { drug: drug.name, analogs: Array.from(merged.values()) };
         }
       }
@@ -341,14 +365,14 @@ export class DrugsService {
     const local = this.localByName(name);
     if (!local) return { drug: name, analogs: [] };
 
-    await this.audit.log({
+    await this.audit.logSafe({
       userId,
       action: 'ANALOG_SEARCH',
       entityType: 'Drug',
       entityId: name,
       newValues: { query: name, source: 'local' },
       ipAddress,
-    }).catch(() => {});
+    });
 
     return {
       drug: local.name,
@@ -392,14 +416,14 @@ export class DrugsService {
           }
         }
         if (results.some(r => r.mechanism ?? r.clinicalEffect)) {
-          await this.audit.log({
+          await this.audit.logSafe({
             userId,
             action: 'INTERACTION_CHECK',
             entityType: 'Drug',
             entityId: items.join(','),
             newValues: { items, resultsCount: results.length },
             ipAddress,
-          }).catch(() => {});
+          });
           return results;
         }
       }
@@ -428,14 +452,14 @@ export class DrugsService {
       }),
     );
 
-    await this.audit.log({
+    await this.audit.logSafe({
       userId,
       action: 'INTERACTION_CHECK',
       entityType: 'Drug',
       entityId: items.join(','),
       newValues: { items, source: 'local' },
       ipAddress,
-    }).catch(() => {});
+    });
 
     return result;
   }
@@ -454,14 +478,14 @@ export class DrugsService {
           if (c.context && context && c.context.toLowerCase() === context.toLowerCase())
             warnings.push(`${c.condition}${c.note ? ' — ' + c.note : ''}`);
         }
-        await this.audit.log({
+        await this.audit.logSafe({
           userId,
           action: 'CONTRA_CHECK',
           entityType: 'Drug',
           entityId: String(dbDrug.id),
           newValues: { drug: dbDrug.name, age, context, warningsCount: warnings.length },
           ipAddress,
-        }).catch(() => {});
+        });
         if (warnings.length > 0) return { drug: dbDrug.name, warnings, source: 'database' };
       }
     } catch (err) {
@@ -478,14 +502,14 @@ export class DrugsService {
     if (context === 'pediatric' && has('детск')) warnings.push('Противопоказан в детском возрасте');
     if (!context && warnings.length === 0) local.contraindications.forEach((c: string) => warnings.push(c));
 
-    await this.audit.log({
+    await this.audit.logSafe({
       userId,
       action: 'CONTRA_CHECK',
       entityType: 'Drug',
       entityId: drug,
       newValues: { drug, age, context, source: 'local', warningsCount: warnings.length },
       ipAddress,
-    }).catch(() => {});
+    });
 
     return { drug: local.name, warnings, source: 'repository' };
   }

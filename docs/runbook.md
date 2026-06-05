@@ -32,8 +32,8 @@ npm run dev
 
 ## 5. Тестовые пользователи
 
-- `admin@pharma.local` / `password123`
-- `doctor@clinic.local` / `password123`
+- `admin@pharma.local` / `admin12345`
+- `doctor@pharma.local` / `doctor12345`
 
 ## 6. Что проверять
 

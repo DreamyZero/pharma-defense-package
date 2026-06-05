@@ -40,7 +40,7 @@ export class AuthService {
       entityId: String(user.id),
       newValues: { email: user.email, role: user.role },
       ipAddress,
-    }).catch(() => {});
+    });
 
     return this.sign(user.id, user.email, user.role);
   }
@@ -58,7 +58,7 @@ export class AuthService {
       entityId: String(user.id),
       newValues: { email: user.email, role: user.role },
       ipAddress,
-    }).catch(() => {});
+    });
 
     return this.sign(user.id, user.email, user.role);
   }

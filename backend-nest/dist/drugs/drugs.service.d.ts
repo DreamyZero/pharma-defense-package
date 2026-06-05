@@ -1,15 +1,16 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PharmaRepository } from '../domain/pharma.repository';
+import { AuditService } from '../audit/audit.service';
 export declare class DrugsService {
     private repo;
     private prisma;
+    private audit;
     private readonly logger;
-    constructor(repo: PharmaRepository, prisma: PrismaService);
+    constructor(repo: PharmaRepository, prisma: PrismaService, audit: AuditService);
     private localBySlug;
     private localByName;
     private enrichDrugDetail;
-    private catalogInclude;
     private isCompleteCatalogDrug;
     catalog(): Promise<({
         substances: ({
@@ -39,14 +40,14 @@ export declare class DrugsService {
         createdAt: Date;
         updatedAt: Date;
         name: string;
-        slug: string;
+        description: string | null;
         dosageForm: string | null;
+        slug: string;
         manufacturer: string | null;
         atcCode: string | null;
         pharmacologicalGroup: string | null;
         registrationNumber: string | null;
         rxRequired: boolean;
-        description: string | null;
         instructionMeta: Prisma.JsonValue | null;
         active: boolean;
     })[] | {
@@ -66,7 +67,7 @@ export declare class DrugsService {
             name: string;
         }[];
     }[]>;
-    search(q: string): Promise<({
+    search(q: string, userId?: number, ipAddress?: string): Promise<({
         substances: ({
             substance: {
                 id: number;
@@ -94,14 +95,14 @@ export declare class DrugsService {
         createdAt: Date;
         updatedAt: Date;
         name: string;
-        slug: string;
+        description: string | null;
         dosageForm: string | null;
+        slug: string;
         manufacturer: string | null;
         atcCode: string | null;
         pharmacologicalGroup: string | null;
         registrationNumber: string | null;
         rxRequired: boolean;
-        description: string | null;
         instructionMeta: Prisma.JsonValue | null;
         active: boolean;
     })[] | {
@@ -117,8 +118,8 @@ export declare class DrugsService {
             };
         }[];
     }[]>;
-    getBySlug(slug: string): Promise<any>;
-    analogs(name: string): Promise<{
+    getBySlug(slug: string, userId?: number, ipAddress?: string): Promise<Record<string, any> | null>;
+    analogs(name: string, userId?: number, ipAddress?: string): Promise<{
         drug: string;
         analogs: {
             id: number;
@@ -128,8 +129,15 @@ export declare class DrugsService {
             reason: string;
         }[];
     }>;
-    interactions(items: string[]): Promise<any[]>;
-    contra(drug: string, age: number, context: string): Promise<{
+    interactions(items: string[], userId?: number, ipAddress?: string): Promise<{
+        a: string;
+        b: string;
+        risk: string;
+        mechanism: string | null;
+        clinicalEffect: string | null;
+        recommendation: string;
+    }[]>;
+    contra(drug: string, age: number, context: string, userId?: number, ipAddress?: string): Promise<{
         drug: string;
         warnings: string[];
         source: string;

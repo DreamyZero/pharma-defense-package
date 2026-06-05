@@ -8,6 +8,7 @@ export type AuditRowDto = {
 };
 export declare class AuditService {
     private prisma;
+    private readonly logger;
     constructor(prisma: PrismaService);
     list(take?: number): Promise<AuditRowDto[]>;
     log(data: {
@@ -20,7 +21,6 @@ export declare class AuditService {
         ipAddress?: string;
     }): Promise<{
         id: number;
-        createdAt: Date;
         userId: number | null;
         action: string;
         entityType: string | null;
@@ -28,5 +28,7 @@ export declare class AuditService {
         oldValues: import("@prisma/client/runtime/library").JsonValue | null;
         newValues: import("@prisma/client/runtime/library").JsonValue | null;
         ipAddress: string | null;
+        createdAt: Date;
     }>;
+    logSafe(data: Parameters<AuditService['log']>[0]): Promise<void>;
 }

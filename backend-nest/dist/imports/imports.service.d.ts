@@ -1,4 +1,5 @@
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
 export interface EtlStatus {
     status: 'ok' | 'failed' | 'never_run';
     started_at?: string;
@@ -9,8 +10,9 @@ export interface EtlStatus {
 }
 export declare class ImportsService {
     private readonly prisma;
+    private readonly audit;
     private readonly logger;
-    constructor(prisma: PrismaService);
+    constructor(prisma: PrismaService, audit: AuditService);
     list(): import(".prisma/client").Prisma.PrismaPromise<({
         creator: {
             email: string;
@@ -28,9 +30,10 @@ export declare class ImportsService {
         createdBy: number | null;
         auditId: number | null;
     })[]>;
-    run(source: string, userId?: number): Promise<{
+    run(source: string, userId?: number, ipAddress?: string): Promise<{
         message: string;
         job: {
+            auditId: number;
             id: number;
             createdAt: Date;
             source: string;
@@ -41,7 +44,6 @@ export declare class ImportsService {
             completedAt: Date | null;
             errorLog: string | null;
             createdBy: number | null;
-            auditId: number | null;
         };
     }>;
     getEtlStatus(): EtlStatus;

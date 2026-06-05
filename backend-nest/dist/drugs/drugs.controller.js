@@ -16,6 +16,8 @@ exports.DrugsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_decorator_1 = require("../auth/guards/roles.decorator");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const drugs_service_1 = require("./drugs.service");
 let DrugsController = class DrugsController {
     constructor(drugsService) {
@@ -24,23 +26,23 @@ let DrugsController = class DrugsController {
     dashboard() {
         return this.drugsService.dashboard();
     }
-    catalog() {
+    catalog(req) {
         return this.drugsService.catalog();
     }
-    search(q = '') {
-        return this.drugsService.search(q);
+    search(q = '', req) {
+        return this.drugsService.search(q, req.user?.userId, req.ip);
     }
-    getBySlug(slug) {
-        return this.drugsService.getBySlug(slug);
+    getBySlug(slug, req) {
+        return this.drugsService.getBySlug(slug, req.user?.userId, req.ip);
     }
-    analogs(name) {
-        return this.drugsService.analogs(name);
+    analogs(name, req) {
+        return this.drugsService.analogs(name, req.user?.userId, req.ip);
     }
-    interactions(body) {
-        return this.drugsService.interactions(body.items || []);
+    interactions(body, req) {
+        return this.drugsService.interactions(body.items || [], req.user?.userId, req.ip);
     }
-    contra(body) {
-        return this.drugsService.contra(body.drug, body.age, body.context);
+    contra(body, req) {
+        return this.drugsService.contra(body.drug, body.age, body.context, req.user?.userId, req.ip);
     }
 };
 exports.DrugsController = DrugsController;
@@ -53,62 +55,74 @@ __decorate([
 ], DrugsController.prototype, "dashboard", null);
 __decorate([
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Каталог препаратов (40 демо-позиций с полной инструкцией)' }),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Каталог препаратов (PHARMACIST, DOCTOR, ADMIN)' }),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('PHARMACIST', 'DOCTOR', 'ADMIN'),
     (0, common_1.Get)('drugs/catalog'),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], DrugsController.prototype, "catalog", null);
 __decorate([
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Поиск препаратов по названию или веществу' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Поиск препаратов по названию или веществу (PHARMACIST, DOCTOR, ADMIN)' }),
     (0, swagger_1.ApiQuery)({ name: 'q', required: true, example: 'аспирин' }),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('PHARMACIST', 'DOCTOR', 'ADMIN'),
     (0, common_1.Get)('drugs/search'),
     __param(0, (0, common_1.Query)('q')),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], DrugsController.prototype, "search", null);
 __decorate([
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Детальная карточка препарата по slug' }),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Детальная карточка препарата по slug (PHARMACIST, DOCTOR, ADMIN)' }),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('PHARMACIST', 'DOCTOR', 'ADMIN'),
     (0, common_1.Get)('drugs/:slug'),
     __param(0, (0, common_1.Param)('slug')),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], DrugsController.prototype, "getBySlug", null);
 __decorate([
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Аналоги препарата по торговому/МНН названию' }),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Аналоги препарата (PHARMACIST, DOCTOR, ADMIN)' }),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('PHARMACIST', 'DOCTOR', 'ADMIN'),
     (0, common_1.Get)('analogs/:name'),
     __param(0, (0, common_1.Param)('name')),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], DrugsController.prototype, "analogs", null);
 __decorate([
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Проверка взаимодействий списка препаратов' }),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Проверка взаимодействий списка препаратов (DOCTOR, ADMIN)' }),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('DOCTOR', 'ADMIN'),
     (0, common_1.Post)('interactions/check'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], DrugsController.prototype, "interactions", null);
 __decorate([
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Проверка противопоказаний' }),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Проверка противопоказаний (DOCTOR, ADMIN)' }),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('DOCTOR', 'ADMIN'),
     (0, common_1.Post)('contra/check'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], DrugsController.prototype, "contra", null);
 exports.DrugsController = DrugsController = __decorate([

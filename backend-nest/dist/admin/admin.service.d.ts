@@ -1,33 +1,19 @@
 import { PrismaService } from '../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 export declare class AdminService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private audit;
+    constructor(prisma: PrismaService, audit: AuditService);
     users(): import(".prisma/client").Prisma.PrismaPromise<{
         id: number;
+        createdAt: Date;
         fullName: string;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     }[]>;
-    audit(): import(".prisma/client").Prisma.PrismaPromise<({
-        user: {
-            fullName: string;
-            email: string;
-        } | null;
-    } & {
-        id: number;
-        createdAt: Date;
-        userId: number | null;
-        action: string;
-        entityType: string | null;
-        entityId: string | null;
-        oldValues: import("@prisma/client/runtime/library").JsonValue | null;
-        newValues: import("@prisma/client/runtime/library").JsonValue | null;
-        ipAddress: string | null;
-    })[]>;
     etl(): import(".prisma/client").Prisma.PrismaPromise<({
         creator: {
             email: string;
@@ -45,18 +31,18 @@ export declare class AdminService {
         createdBy: number | null;
         auditId: number | null;
     })[]>;
-    setRole(userId: number, role: 'DOCTOR' | 'PHARMACIST' | 'ADMIN'): Promise<{
+    setRole(userId: number, role: 'DOCTOR' | 'PHARMACIST' | 'ADMIN', actorId?: number, ipAddress?: string): Promise<{
         id: number;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
     }>;
-    updateUser(userId: number, dto: AdminUpdateUserDto): Promise<{
+    updateUser(userId: number, dto: AdminUpdateUserDto, actorId?: number, ipAddress?: string): Promise<{
         id: number;
+        createdAt: Date;
         fullName: string;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     } | undefined>;
 }

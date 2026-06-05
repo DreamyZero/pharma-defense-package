@@ -26,7 +26,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend-nest:/app
-    command: sh -c "npm install && npx nest start --watch"
+    command: sh -c "rm -rf dist/src && npm install && npx nest start --watch"
     ports:
       - "3001:3000"
     environment:

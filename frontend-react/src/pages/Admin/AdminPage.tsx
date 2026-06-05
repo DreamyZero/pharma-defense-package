@@ -45,20 +45,48 @@ export function AdminPage() {
   const [metrics, setMetrics] = useState<Metric[]>(DEFAULT_METRICS);
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const [statsError, setStatsError] = useState(false);
+  const [auditError, setAuditError] = useState(false);
+
+  const loadAudit = async () => {
+    try {
+      const rows = await fetchAudit();
+      setAudit(rows);
+      setAuditError(false);
+      return rows;
+    } catch {
+      setAudit([]);
+      setAuditError(true);
+      return [];
+    }
+  };
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       fetchImports(),
       fetchAudit(),
-      fetchAdminUsers().catch(() => []),
-      api.get('/dashboard').then(r => r.data).catch(() => null),
-    ]).then(([i, a, u, d]) => {
-      setImports(i);
-      setAudit(a);
-      setUsers(u);
-      if (d?.metrics) setMetrics(d.metrics);
-      else setStatsError(true);
-      if (d?.recentQueries) setRecentQueries(d.recentQueries);
+      fetchAdminUsers(),
+      api.get('/dashboard').then(r => r.data),
+    ]).then(async ([importsResult, auditResult, usersResult, dashboardResult]) => {
+      if (importsResult.status === 'fulfilled') setImports(importsResult.value);
+      if (usersResult.status === 'fulfilled') setUsers(usersResult.value);
+      else setUsers([]);
+
+      if (auditResult.status === 'fulfilled') {
+        setAudit(auditResult.value);
+        setAuditError(false);
+      } else {
+        setAudit([]);
+        setAuditError(true);
+      }
+
+      if (dashboardResult.status === 'fulfilled' && dashboardResult.value?.metrics) {
+        setMetrics(dashboardResult.value.metrics);
+        setRecentQueries(dashboardResult.value.recentQueries ?? []);
+        setStatsError(false);
+      } else {
+        setStatsError(true);
+      }
+
       setLoading(false);
     });
   }, []);
@@ -67,6 +95,7 @@ export function AdminPage() {
     const res = await runImport(source);
     setMessage(res.message);
     setImports(prev => [res.job, ...prev]);
+    await loadAudit();
   };
 
   const handleRoleChange = async (userId: number, role: AdminUser['role']) => {
@@ -74,6 +103,7 @@ export function AdminPage() {
       await setUserRole(userId, role);
       setUsers(prev => prev.map(u => (u.id === userId ? { ...u, role } : u)));
       setUserMessage(`Роль пользователя #${userId} обновлена`);
+      await loadAudit();
     } catch {
       setUserMessage('Не удалось обновить роль');
     }
@@ -112,6 +142,7 @@ export function AdminPage() {
         return next;
       });
       setUserMessage(`Данные пользователя #${userId} сохранены`);
+      await loadAudit();
     } catch {
       setUserMessage('Не удалось обновить email или пароль');
     }
@@ -288,8 +319,30 @@ export function AdminPage() {
       <section style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ margin: 0 }}>Журнал аудита</h2>
-          <span style={{ color: '#6b7280' }}>Только для администратора</span>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => loadAudit()}
+              style={{
+                background: '#f3f4f6',
+                color: '#111827',
+                border: '1px solid #d1d5db',
+                borderRadius: 8,
+                padding: '8px 12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Обновить
+            </button>
+            <span style={{ color: '#6b7280' }}>Только для администратора</span>
+          </div>
         </div>
+        {auditError && (
+          <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: '#fef2f2', color: '#991b1b' }}>
+            Не удалось загрузить журнал аудита. Проверьте, что backend запущен и вы вошли как ADMIN.
+          </div>
+        )}
         <div style={{ overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -313,8 +366,8 @@ export function AdminPage() {
               ))}
             </tbody>
           </table>
-          {!loading && audit.length === 0 && (
-            <div style={{ color: '#6b7280', padding: 16 }}>Записей аудита пока нет</div>
+          {!loading && !auditError && audit.length === 0 && (
+            <div style={{ color: '#6b7280', padding: 16 }}>Записей аудита пока нет. Выполните вход, поиск или запуск ETL.</div>
           )}
         </div>
       </section>

@@ -5,20 +5,20 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     me(req: any): Promise<{
         id: number;
+        createdAt: Date;
         fullName: string;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     }>;
     update(req: any, dto: UpdateUserDto): Promise<{
         id: number;
+        createdAt: Date;
         fullName: string;
         email: string;
         role: import(".prisma/client").$Enums.UserRole;
         organization: string | null;
         verified: boolean;
-        createdAt: Date;
     }>;
 }

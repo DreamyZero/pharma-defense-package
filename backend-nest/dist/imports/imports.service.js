@@ -15,9 +15,11 @@ const common_1 = require("@nestjs/common");
 const fs_1 = require("fs");
 const path_1 = require("path");
 const prisma_service_1 = require("../database/prisma.service");
+const audit_service_1 = require("../audit/audit.service");
 let ImportsService = ImportsService_1 = class ImportsService {
-    constructor(prisma) {
+    constructor(prisma, audit) {
         this.prisma = prisma;
+        this.audit = audit;
         this.logger = new common_1.Logger(ImportsService_1.name);
     }
     list() {
@@ -27,7 +29,7 @@ let ImportsService = ImportsService_1 = class ImportsService {
             include: { creator: { select: { email: true } } },
         });
     }
-    async run(source, userId) {
+    async run(source, userId, ipAddress) {
         const job = await this.prisma.drugImport.create({
             data: {
                 source,
@@ -38,7 +40,19 @@ let ImportsService = ImportsService_1 = class ImportsService {
                 createdBy: userId ?? null,
             },
         });
-        return { message: 'ETL import started', job };
+        const auditEntry = await this.audit.log({
+            userId,
+            action: 'ETL_RUN',
+            entityType: 'DrugImport',
+            entityId: String(job.id),
+            newValues: { source, jobId: job.id },
+            ipAddress,
+        });
+        await this.prisma.drugImport.update({
+            where: { id: job.id },
+            data: { auditId: auditEntry.id },
+        });
+        return { message: 'ETL import started', job: { ...job, auditId: auditEntry.id } };
     }
     getEtlStatus() {
         const statusPath = (0, path_1.join)(__dirname, '..', '..', '..', '..', 'etl', 'output', 'etl_status.json');
@@ -58,6 +72,7 @@ let ImportsService = ImportsService_1 = class ImportsService {
 exports.ImportsService = ImportsService;
 exports.ImportsService = ImportsService = ImportsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        audit_service_1.AuditService])
 ], ImportsService);
 //# sourceMappingURL=imports.service.js.map

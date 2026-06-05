@@ -13,21 +13,16 @@ exports.AdminService = void 0;
 const common_1 = require("@nestjs/common");
 const bcrypt = require("bcryptjs");
 const prisma_service_1 = require("../database/prisma.service");
+const audit_service_1 = require("../audit/audit.service");
 let AdminService = class AdminService {
-    constructor(prisma) {
+    constructor(prisma, audit) {
         this.prisma = prisma;
+        this.audit = audit;
     }
     users() {
         return this.prisma.user.findMany({
             select: { id: true, fullName: true, email: true, role: true, organization: true, verified: true, createdAt: true },
             orderBy: { createdAt: 'desc' },
-        });
-    }
-    audit() {
-        return this.prisma.auditLog.findMany({
-            take: 50,
-            orderBy: { createdAt: 'desc' },
-            include: { user: { select: { email: true, fullName: true } } },
         });
     }
     etl() {
@@ -37,14 +32,30 @@ let AdminService = class AdminService {
             include: { creator: { select: { email: true } } },
         });
     }
-    async setRole(userId, role) {
-        return this.prisma.user.update({
+    async setRole(userId, role, actorId, ipAddress) {
+        const before = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, role: true },
+        });
+        if (!before)
+            throw new common_1.NotFoundException('Пользователь не найден');
+        const updated = await this.prisma.user.update({
             where: { id: userId },
             data: { role: role },
             select: { id: true, email: true, role: true },
         });
+        await this.audit.log({
+            userId: actorId,
+            action: 'USER_ROLE_CHANGE',
+            entityType: 'User',
+            entityId: String(userId),
+            oldValues: { role: before.role, email: before.email },
+            newValues: { role: updated.role, email: updated.email },
+            ipAddress,
+        });
+        return updated;
     }
-    async updateUser(userId, dto) {
+    async updateUser(userId, dto, actorId, ipAddress) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user)
             throw new common_1.NotFoundException('Пользователь не найден');
@@ -61,7 +72,7 @@ let AdminService = class AdminService {
         if (!data.email && !data.passwordHash) {
             return this.users().then(list => list.find(u => u.id === userId));
         }
-        return this.prisma.user.update({
+        const updated = await this.prisma.user.update({
             where: { id: userId },
             data,
             select: {
@@ -74,11 +85,25 @@ let AdminService = class AdminService {
                 createdAt: true,
             },
         });
+        await this.audit.log({
+            userId: actorId,
+            action: 'USER_UPDATE',
+            entityType: 'User',
+            entityId: String(userId),
+            oldValues: { email: user.email },
+            newValues: {
+                email: updated.email,
+                passwordChanged: !!dto.password,
+            },
+            ipAddress,
+        });
+        return updated;
     }
 };
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        audit_service_1.AuditService])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

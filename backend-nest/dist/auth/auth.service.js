@@ -14,12 +14,14 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = require("bcryptjs");
 const prisma_service_1 = require("../database/prisma.service");
+const audit_service_1 = require("../audit/audit.service");
 let AuthService = class AuthService {
-    constructor(prisma, jwt) {
+    constructor(prisma, jwt, audit) {
         this.prisma = prisma;
         this.jwt = jwt;
+        this.audit = audit;
     }
-    async register(dto) {
+    async register(dto, ipAddress) {
         const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
         if (existing)
             throw new common_1.ConflictException('Email уже зарегистрирован');
@@ -33,13 +35,29 @@ let AuthService = class AuthService {
                 role: dto.role || 'DOCTOR',
             },
         });
+        await this.audit.log({
+            userId: user.id,
+            action: 'USER_REGISTER',
+            entityType: 'User',
+            entityId: String(user.id),
+            newValues: { email: user.email, role: user.role },
+            ipAddress,
+        });
         return this.sign(user.id, user.email, user.role);
     }
-    async login(dto) {
+    async login(dto, ipAddress) {
         const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
         if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
             throw new common_1.UnauthorizedException('Неверный email или пароль');
         }
+        await this.audit.log({
+            userId: user.id,
+            action: 'USER_LOGIN',
+            entityType: 'User',
+            entityId: String(user.id),
+            newValues: { email: user.email, role: user.role },
+            ipAddress,
+        });
         return this.sign(user.id, user.email, user.role);
     }
     async profile(userId) {
@@ -59,6 +77,8 @@ let AuthService = class AuthService {
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService, jwt_1.JwtService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        jwt_1.JwtService,
+        audit_service_1.AuditService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

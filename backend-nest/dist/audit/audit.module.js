@@ -14,6 +14,10 @@ let AuditModule = class AuditModule {
 };
 exports.AuditModule = AuditModule;
 exports.AuditModule = AuditModule = __decorate([
-    (0, common_1.Module)({ controllers: [audit_controller_1.AuditController], providers: [audit_service_1.AuditService], exports: [audit_service_1.AuditService] })
+    (0, common_1.Module)({
+        controllers: [audit_controller_1.AuditController],
+        providers: [audit_service_1.AuditService],
+        exports: [audit_service_1.AuditService],
+    })
 ], AuditModule);
 //# sourceMappingURL=audit.module.js.map

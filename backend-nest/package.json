@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "start:dev": "nest start --watch",
+    "start:dev": "node -e \"require('fs').rmSync('dist/src',{recursive:true,force:true})\" && nest start --watch",
     "prebuild": "prisma generate --schema=./prisma/schema.prisma",
     "build": "nest build",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
@@ -16,7 +16,7 @@
   "jest": {
     "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "src",
-    "testRegex": ".*\.spec\.ts$",
+    "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

@@ -1,0 +1,204 @@
+/* ─── Multi-color polish (keeps brutalist layout) ───────────────── */
+
+body {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg) 78%, transparent) 0%,
+      color-mix(in srgb, var(--color-bg) 86%, transparent) 45%,
+      color-mix(in srgb, var(--color-bg) 92%, transparent) 100%
+    ),
+    url('/images/app-bg.svg');
+  background-size: cover, cover;
+  background-position: center center, center center;
+  background-attachment: fixed, fixed;
+  background-repeat: no-repeat, no-repeat;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg) 82%, transparent) 0%,
+      color-mix(in srgb, var(--color-bg) 90%, transparent) 100%
+    ),
+    url('/images/app-bg.svg');
+}
+
+.app-header {
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.app-main {
+  background: transparent;
+}
+
+.app-header__logo-icon {
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header__user-avatar {
+  background: var(--gradient-accent);
+}
+
+.nav-item.active,
+.nav-item--rich.active {
+  border-left-color: var(--color-teal);
+  border-color: transparent transparent transparent var(--color-teal);
+}
+
+.card,
+.stat-card,
+.drug-card-rich,
+.admin-metrics .admin-panel,
+.catalog-detail,
+.interaction-card,
+.profile-card {
+  box-shadow: var(--shadow-sm), var(--shadow-soft);
+}
+
+.page-title::after {
+  width: 56px;
+  height: 4px;
+  background: var(--gradient-accent);
+  border-radius: var(--radius-full);
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+}
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.auth-wrap::before {
+  background:
+    radial-gradient(ellipse 55% 45% at 12% 18%, color-mix(in srgb, var(--color-sky) 18%, transparent), transparent),
+    radial-gradient(ellipse 50% 40% at 88% 22%, color-mix(in srgb, var(--color-violet) 12%, transparent), transparent),
+    radial-gradient(ellipse 45% 35% at 70% 88%, color-mix(in srgb, var(--color-teal) 14%, transparent), transparent);
+}
+
+.auth-logo-icon {
+  background: var(--gradient-primary);
+}
+
+/* Stat cards — rotating accent colors */
+.stat-card:nth-child(4n + 1) { border-top: 3px solid var(--color-primary); }
+.stat-card:nth-child(4n + 2) { border-top: 3px solid var(--color-teal); }
+.stat-card:nth-child(4n + 3) { border-top: 3px solid var(--color-violet); }
+.stat-card:nth-child(4n + 4) { border-top: 3px solid var(--color-amber); }
+
+.stat-card:nth-child(4n + 1) .stat-card__icon { background: var(--color-primary-light); color: var(--color-primary); }
+.stat-card:nth-child(4n + 2) .stat-card__icon { background: var(--color-teal-soft); color: var(--color-teal); }
+.stat-card:nth-child(4n + 3) .stat-card__icon { background: var(--color-violet-soft); color: var(--color-violet); }
+.stat-card:nth-child(4n + 4) .stat-card__icon { background: var(--color-amber-soft); color: var(--color-amber); }
+
+.stat-card:nth-child(4n + 1) .stat-card__value { color: var(--color-primary); }
+.stat-card:nth-child(4n + 2) .stat-card__value { color: var(--color-teal); }
+.stat-card:nth-child(4n + 3) .stat-card__value { color: var(--color-violet); }
+.stat-card:nth-child(4n + 4) .stat-card__value { color: var(--color-amber); }
+
+/* Admin metrics */
+.admin-metrics .admin-panel:nth-child(1) { border-top: 4px solid var(--color-primary); }
+.admin-metrics .admin-panel:nth-child(2) { border-top: 4px solid var(--color-teal); }
+.admin-metrics .admin-panel:nth-child(3) { border-top: 4px solid var(--color-violet); }
+.admin-metrics .admin-panel:nth-child(4) { border-top: 4px solid var(--color-amber); }
+
+.admin-metrics .admin-panel:nth-child(1) .admin-metric__value { color: var(--color-primary); }
+.admin-metrics .admin-panel:nth-child(2) .admin-metric__value { color: var(--color-teal); }
+.admin-metrics .admin-panel:nth-child(3) .admin-metric__value { color: var(--color-violet); }
+.admin-metrics .admin-panel:nth-child(4) .admin-metric__value { color: var(--color-amber); }
+
+.admin-panel__head {
+  background: var(--gradient-hero);
+  border-bottom: none;
+}
+
+.drug-detail-hero,
+.drug-modal__hero {
+  background: var(--gradient-hero);
+}
+
+.drug-modal__hero {
+  border-bottom: 3px solid var(--color-teal);
+}
+
+.catalog-page__header-icon {
+  background: var(--gradient-primary);
+}
+
+.catalog-stats-pill {
+  background: var(--color-sky-soft);
+  color: var(--color-sky);
+  border-color: var(--color-sky);
+}
+
+/* Drug catalog cards — colored left stripe */
+.drug-card-rich:nth-child(6n + 1)::before { background: var(--color-primary); }
+.drug-card-rich:nth-child(6n + 2)::before { background: var(--color-teal); }
+.drug-card-rich:nth-child(6n + 3)::before { background: var(--color-violet); }
+.drug-card-rich:nth-child(6n + 4)::before { background: var(--color-sky); }
+.drug-card-rich:nth-child(6n + 5)::before { background: var(--color-amber); }
+.drug-card-rich:nth-child(6n + 6)::before { background: var(--color-rose); }
+
+.drug-card-rich:nth-child(6n + 1) .drug-card-rich__icon { color: var(--color-primary); background: var(--color-primary-light); }
+.drug-card-rich:nth-child(6n + 2) .drug-card-rich__icon { color: var(--color-teal); background: var(--color-teal-soft); }
+.drug-card-rich:nth-child(6n + 3) .drug-card-rich__icon { color: var(--color-violet); background: var(--color-violet-soft); }
+.drug-card-rich:nth-child(6n + 4) .drug-card-rich__icon { color: var(--color-sky); background: var(--color-sky-soft); }
+.drug-card-rich:nth-child(6n + 5) .drug-card-rich__icon { color: var(--color-amber); background: var(--color-amber-soft); }
+.drug-card-rich:nth-child(6n + 6) .drug-card-rich__icon { color: var(--color-rose); background: var(--color-rose-soft); }
+
+.drug-card-rich:hover::before,
+.drug-card-rich--selected::before {
+  background: var(--gradient-accent);
+}
+
+.drug-badge--atc {
+  background: var(--color-violet-soft);
+  color: var(--color-violet);
+}
+
+.profile-stat:nth-child(1) { border-top: 3px solid var(--color-primary); }
+.profile-stat:nth-child(2) { border-top: 3px solid var(--color-teal); }
+.profile-stat:nth-child(3) { border-top: 3px solid var(--color-violet); }
+
+.profile-stat:nth-child(1) .profile-stat__value { color: var(--color-primary); }
+.profile-stat:nth-child(2) .profile-stat__value { color: var(--color-teal); }
+.profile-stat:nth-child(3) .profile-stat__value { color: var(--color-violet); }
+
+.profile-avatar {
+  background: var(--gradient-accent);
+}
+
+.interaction-card--high { border-left-color: var(--color-rose); }
+.interaction-card--medium,
+.interaction-card--moderate { border-left-color: var(--color-amber); }
+.interaction-card--low { border-left-color: var(--color-teal); }
+
+.admin-tab.active {
+  background: var(--gradient-primary);
+}
+
+.tag-atc {
+  background: var(--color-violet-soft);
+  color: var(--color-violet);
+}
+
+.tag-otc {
+  background: var(--color-teal-soft);
+  color: var(--color-teal);
+}
+
+.empty-state {
+  border-color: var(--color-sky);
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-primary-light));
+}
+
+.nav-item__icon-box--blue { color: #93c5fd; border-color: rgba(147, 197, 253, 0.45); background: rgba(59, 130, 246, 0.22); }
+.nav-item__icon-box--teal { color: #5eead4; border-color: rgba(94, 234, 212, 0.35); background: rgba(13, 148, 136, 0.22); }
+.nav-item__icon-box--violet { color: #c4b5fd; border-color: rgba(196, 181, 253, 0.35); background: rgba(124, 58, 237, 0.2); }
+.nav-item__icon-box--amber { color: #fcd34d; border-color: rgba(252, 211, 77, 0.35); background: rgba(217, 119, 6, 0.2); }
+.nav-item__icon-box--red { color: #fda4af; border-color: rgba(253, 164, 175, 0.35); background: rgba(225, 29, 72, 0.18); }

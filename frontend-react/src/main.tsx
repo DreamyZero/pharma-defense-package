@@ -18,6 +18,7 @@ import './styles/variables.css';
 import './styles/base.css';
 import './styles/layout.css';
 import './styles/pages.css';
+import './styles/enhancements.css';
 
 const NAV_ITEMS = [
   { to: '/search', label: 'Справочник', desc: 'Каталог и карточки препаратов', icon: 'pill', tone: 'teal' },

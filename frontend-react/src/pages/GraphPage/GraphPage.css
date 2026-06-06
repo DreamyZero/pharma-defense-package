@@ -33,9 +33,11 @@
   padding: var(--sp-3) var(--sp-4);
   background: var(--color-warning-light);
   color: var(--color-warning);
+  border: 2px solid var(--color-warning);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .graph-layout {
@@ -49,10 +51,10 @@
 .graph-canvas-wrap {
   position: relative;
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), var(--shadow-soft);
   overflow: hidden;
-  /* Fix: explicit min-height so clientHeight is never 0 on first D3 render */
   height: 100%;
   min-height: 560px;
 }
@@ -80,7 +82,7 @@
   bottom: var(--sp-4);
   left: var(--sp-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: var(--sp-3) var(--sp-4);
   box-shadow: var(--shadow-md);
@@ -100,9 +102,10 @@
 
 .graph-legend {
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   padding: var(--sp-4);
+  box-shadow: var(--shadow-sm);
 }
 
 .legend-item {
@@ -136,10 +139,11 @@
 
 .graph-filter {
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   padding: var(--sp-4);
   margin-top: var(--sp-4);
+  box-shadow: var(--shadow-sm);
 }
 
 .graph-stats {
@@ -151,12 +155,13 @@
 .stat-pill {
   flex: 1;
   background: var(--color-surface);
-  border: 1px solid var(--color-divider);
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: var(--sp-2) var(--sp-3);
   text-align: center;
   font-size: var(--text-xs);
   color: var(--color-text-muted);
+  box-shadow: 2px 2px 0 var(--color-border);
 }
 
 .stat-pill span {

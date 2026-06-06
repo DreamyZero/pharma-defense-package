@@ -1,118 +1,162 @@
-:root {
-  /* ─── Palette ─────────────────────────────────────────────────────── */
-  --color-bg:              #f0f4f8;
-  --color-surface:         #ffffff;
-  --color-surface-2:       #f8fafc;
-  --color-surface-offset:  #e8edf2;
-  --color-surface-dynamic: #dde5ed;
-  --color-divider:         #dde3ea;
-  --color-border:          #cdd4dc;
-
-  --color-text:            #0f1923;
-  --color-text-muted:      #5a6878;
-  --color-text-faint:      #9aa5b1;
-  --color-text-inverse:    #ffffff;
-
-  /* Primary – pharma teal */
-  --color-primary:         #0d7a6e;
-  --color-primary-hover:   #085f56;
-  --color-primary-active:  #054540;
-  --color-primary-light:   #e0f2ef;
-  --color-primary-ring:    rgba(13,122,110,.22);
-
-  /* Semantic */
-  --color-danger:          #c0392b;
-  --color-danger-light:    #fdecea;
-  --color-warning:         #d97706;
-  --color-warning-light:   #fef3c7;
-  --color-success:         #059669;
-  --color-success-light:   #d1fae5;
-  --color-info:            #2563eb;
-  --color-info-light:      #dbeafe;
-
-  /* Severity (взаимодействия) */
-  --color-high:    #c0392b;
-  --color-medium:  #d97706;
-  --color-low:     #059669;
-
-  /* Node types (граф) */
-  --node-drug:            #0d7a6e;
-  --node-substance:       #2563eb;
-  --node-group:           #7c3aed;
-  --node-indication:      #059669;
-  --node-contraindication:#c0392b;
-
-  /* ─── Typography ─────────────────────────────────────────────────── */
-  --font-body:    'Inter', 'Segoe UI', sans-serif;
-  --font-display: 'Inter', 'Segoe UI', sans-serif;
-  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
-
-  --text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
-  --text-sm:   clamp(0.875rem, 0.8rem  + 0.35vw, 1rem);
-  --text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
-  --text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
-  --text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
-  --text-2xl:  clamp(2rem,     1.2rem  + 2.5vw,  3.5rem);
-
-  /* ─── Spacing ────────────────────────────────────────────────────── */
-  --sp-1: .25rem; --sp-2: .5rem;  --sp-3: .75rem; --sp-4: 1rem;
-  --sp-5: 1.25rem;--sp-6: 1.5rem; --sp-8: 2rem;   --sp-10: 2.5rem;
-  --sp-12: 3rem;  --sp-16: 4rem;  --sp-20: 5rem;
-
-  /* ─── Shape & Motion ─────────────────────────────────────────────── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
-
-  --shadow-sm: 0 1px 3px rgba(15,25,35,.07), 0 1px 2px rgba(15,25,35,.04);
-  --shadow-md: 0 4px 12px rgba(15,25,35,.10), 0 2px 4px rgba(15,25,35,.06);
-  --shadow-lg: 0 12px 32px rgba(15,25,35,.13), 0 4px 8px rgba(15,25,35,.07);
-
-  --transition: 160ms cubic-bezier(.16,1,.3,1);
-
-  /* ─── Layout ─────────────────────────────────────────────────────── */
-  --sidebar-w: 272px;
-  --header-h:  60px;
-  --content-max: 1100px;
-}
-
-/* ─── Dark Mode ──────────────────────────────────────────────────── */
-[data-theme="dark"] {
-  --color-bg:              #0f1923;
-  --color-surface:         #151f2a;
-  --color-surface-2:       #1a2635;
-  --color-surface-offset:  #1e2d3d;
-  --color-surface-dynamic: #243347;
-  --color-divider:         #1e2d3d;
-  --color-border:          #2a3a4d;
-
-  --color-text:            #e2e8f0;
-  --color-text-muted:      #7a9ab5;
-  --color-text-faint:      #4a6480;
-  --color-text-inverse:    #0f1923;
-
-  --color-primary:         #14a896;
-  --color-primary-hover:   #0d8a7a;
-  --color-primary-active:  #0a6a5e;
-  --color-primary-light:   #0d3530;
-  --color-primary-ring:    rgba(20,168,150,.25);
-
-  --color-danger:          #ef5350;
-  --color-danger-light:    #2c1515;
-  --color-warning:         #f59e0b;
-  --color-warning-light:   #2c200a;
-  --color-success:         #10b981;
-  --color-success-light:   #0a2419;
-  --color-info:            #60a5fa;
-  --color-info-light:      #0f1e35;
-
-  --color-high:    #ef5350;
-  --color-medium:  #f59e0b;
-  --color-low:     #10b981;
-
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.3);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.4);
-}
+:root {
+  /* ─── Clinical palette (multi-color) ─────────────────────────────── */
+  --color-bg:              #f4f8ff;
+  --color-bg-pattern:      #c7d9f5;
+  --color-surface:         #ffffff;
+  --color-surface-2:       #f9fbff;
+  --color-surface-offset:  #f0f5fd;
+  --color-surface-dynamic: #e8f0fc;
+  --color-divider:         #e2e8f0;
+  --color-border:          #c8d4e6;
+  --color-border-strong:   #1e40af;
+
+  --color-text:            #0f172a;
+  --color-text-muted:      #5b6b82;
+  --color-text-faint:      #94a3b8;
+  --color-text-inverse:    #ffffff;
+
+  /* Primary — blue */
+  --color-accent:          #2563eb;
+  --color-accent-hover:    #1d4ed8;
+  --color-accent-soft:     #dbeafe;
+  --color-primary:         #2563eb;
+  --color-primary-hover:   #1d4ed8;
+  --color-primary-active:  #1e3a8a;
+  --color-primary-light:   #eff6ff;
+
+  /* Secondary accents */
+  --color-teal:            #0d9488;
+  --color-teal-soft:       #ccfbf1;
+  --color-sky:             #0284c7;
+  --color-sky-soft:        #e0f2fe;
+  --color-violet:          #7c3aed;
+  --color-violet-soft:     #ede9fe;
+  --color-amber:           #d97706;
+  --color-amber-soft:      #fef3c7;
+  --color-rose:            #e11d48;
+  --color-rose-soft:       #ffe4e6;
+
+  --color-primary-ring:    rgba(37, 99, 235, 0.22);
+  --gradient-primary:      linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+  --gradient-accent:       linear-gradient(90deg, #38bdf8, #3b82f6, #6366f1, #0d9488);
+  --gradient-sidebar:      linear-gradient(180deg, #1e3a8a 0%, #172554 45%, #312e81 100%);
+  --gradient-hero:         linear-gradient(135deg, #1e40af 0%, #2563eb 40%, #0d9488 100%);
+  --gradient-warm:         radial-gradient(ellipse 80% 60% at 10% 0%, rgba(59, 130, 246, 0.14), transparent),
+                           radial-gradient(ellipse 70% 50% at 90% 10%, rgba(13, 148, 136, 0.1), transparent),
+                           radial-gradient(ellipse 60% 45% at 50% 100%, rgba(124, 58, 237, 0.08), transparent);
+
+  --color-danger:          #dc2626;
+  --color-danger-light:    #fef2f2;
+  --color-warning:         #d97706;
+  --color-warning-light:   #fffbeb;
+  --color-success:         #059669;
+  --color-success-light:   #ecfdf5;
+  --color-info:            #0284c7;
+  --color-info-light:      #e0f2fe;
+
+  --color-high:    #dc2626;
+  --color-medium:  #d97706;
+  --color-low:     #059669;
+
+  --sidebar-bg:            var(--gradient-sidebar);
+  --sidebar-text:          #f0f9ff;
+  --sidebar-text-muted:    #93c5fd;
+  --sidebar-active-bg:     rgba(255, 255, 255, 0.1);
+  --sidebar-border:        rgba(147, 197, 253, 0.28);
+
+  --node-drug:            #2563eb;
+  --node-substance:       #0284c7;
+  --node-group:           #7c3aed;
+  --node-indication:      #059669;
+  --node-contraindication:#dc2626;
+
+  --font-body:    'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-mono:    'IBM Plex Mono', 'Consolas', monospace;
+
+  --text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
+  --text-sm:   clamp(0.875rem, 0.8rem  + 0.35vw, 1rem);
+  --text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
+  --text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
+  --text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
+  --text-2xl:  clamp(2rem,     1.2rem  + 2.5vw,  3.5rem);
+
+  --sp-1: .25rem; --sp-2: .5rem;  --sp-3: .75rem; --sp-4: 1rem;
+  --sp-5: 1.25rem;--sp-6: 1.5rem; --sp-8: 2rem;   --sp-10: 2.5rem;
+  --sp-12: 3rem;  --sp-16: 4rem;  --sp-20: 5rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 2px 2px 0 rgba(30, 64, 175, 0.45);
+  --shadow-md: 4px 4px 0 rgba(30, 64, 175, 0.4);
+  --shadow-lg: 6px 6px 0 rgba(30, 64, 175, 0.35);
+  --shadow-soft: 0 8px 24px rgba(37, 99, 235, 0.08);
+  --shadow-glow: 3px 3px 0 var(--color-accent);
+  --block-offset: 4px;
+
+  --transition: 160ms ease;
+
+  --sidebar-w: 268px;
+  --header-h:  58px;
+  --content-max: 1160px;
+}
+
+[data-theme="dark"] {
+  --color-bg:              #0c1222;
+  --color-bg-pattern:      #1e3a5f;
+  --color-surface:         #111827;
+  --color-surface-2:       #1a2332;
+  --color-surface-offset:  #1e293b;
+  --color-surface-dynamic: #243044;
+  --color-divider:         #334155;
+  --color-border:          #475569;
+  --color-border-strong:   #93c5fd;
+
+  --color-text:            #f1f5f9;
+  --color-text-muted:      #94a3b8;
+  --color-text-faint:      #64748b;
+  --color-text-inverse:    #0f172a;
+
+  --color-accent:          #60a5fa;
+  --color-accent-hover:    #93c5fd;
+  --color-accent-soft:     #1e3a5f;
+  --color-primary:         #60a5fa;
+  --color-primary-hover:   #93c5fd;
+  --color-primary-active:  #3b82f6;
+  --color-primary-light:   #172554;
+  --color-primary-ring:    rgba(96, 165, 250, 0.3);
+
+  --color-teal:            #2dd4bf;
+  --color-teal-soft:       #134e4a;
+  --color-sky:             #38bdf8;
+  --color-sky-soft:        #0c4a6e;
+  --color-violet:          #a78bfa;
+  --color-violet-soft:     #2e1065;
+  --color-amber:           #fbbf24;
+  --color-amber-soft:      #451a03;
+  --color-rose:            #fb7185;
+  --color-rose-soft:       #4c0519;
+
+  --gradient-primary:      linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --gradient-accent:       linear-gradient(90deg, #38bdf8, #60a5fa, #a78bfa, #2dd4bf);
+  --gradient-sidebar:      linear-gradient(180deg, #0f172a 0%, #172554 50%, #1e1b4b 100%);
+  --gradient-hero:         linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0f766e 100%);
+  --gradient-warm:         radial-gradient(ellipse 80% 60% at 10% 0%, rgba(59, 130, 246, 0.12), transparent),
+                           radial-gradient(ellipse 70% 50% at 90% 10%, rgba(45, 212, 191, 0.08), transparent);
+
+  --sidebar-bg:            var(--gradient-sidebar);
+  --sidebar-text:          #f0f9ff;
+  --sidebar-text-muted:    #64748b;
+  --sidebar-active-bg:     rgba(96, 165, 250, 0.12);
+  --sidebar-border:        #334155;
+
+  --shadow-sm: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  --shadow-lg: 6px 6px 0 rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 3px 3px 0 var(--color-accent);
+}

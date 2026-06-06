@@ -4,23 +4,6 @@ import { fetchAudit, type AuditRow } from '../../entities/audit/api';
 import { fetchAdminUsers, setUserRole, updateAdminUser, type AdminUser } from '../../entities/admin/api';
 import { api } from '../../shared/api';
 
-const card: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: '0 10px 30px rgba(15,23,42,.06)',
-};
-const badge = (status: string): React.CSSProperties => ({
-  display: 'inline-flex',
-  padding: '6px 10px',
-  borderRadius: 999,
-  color: status === 'completed' ? '#166534' : status === 'running' ? '#92400e' : '#991b1b',
-  background: status === 'completed' ? '#dcfce7' : status === 'running' ? '#fef3c7' : '#fee2e2',
-  fontWeight: 700,
-  fontSize: 12,
-});
-
 type Metric = { label: string; value: string | number; note: string };
 type RecentQuery = { name: string; subtitle: string; time: string };
 
@@ -32,6 +15,14 @@ const DEFAULT_METRICS: Metric[] = [
 ];
 
 const ROLES: AdminUser['role'][] = ['DOCTOR', 'PHARMACIST', 'ADMIN'];
+
+function statusBadgeClass(status: string) {
+  const s = status.toLowerCase();
+  if (s === 'completed') return 'admin-badge admin-badge--completed';
+  if (s === 'running') return 'admin-badge admin-badge--running';
+  if (s === 'failed') return 'admin-badge admin-badge--failed';
+  return 'admin-badge admin-badge--pending';
+}
 
 export function AdminPage() {
   const [imports, setImports] = useState<ImportJob[]>([]);
@@ -66,7 +57,7 @@ export function AdminPage() {
       fetchAudit(),
       fetchAdminUsers(),
       api.get('/dashboard').then(r => r.data),
-    ]).then(async ([importsResult, auditResult, usersResult, dashboardResult]) => {
+    ]).then(([importsResult, auditResult, usersResult, dashboardResult]) => {
       if (importsResult.status === 'fulfilled') setImports(importsResult.value);
       if (usersResult.status === 'fulfilled') setUsers(usersResult.value);
       else setUsers([]);
@@ -149,86 +140,71 @@ export function AdminPage() {
   };
 
   return (
-    <div style={{ display: 'grid', gap: 20 }}>
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
+    <div className="admin-page">
+      <section className="admin-metrics">
         {metrics.map(({ label, value, note }) => (
-          <div key={label} style={card}>
-            <div style={{ color: '#6b7280', fontSize: 14, marginBottom: 10 }}>{label}</div>
-            <div style={{ fontSize: 34, fontWeight: 800, marginBottom: 8 }}>
+          <div key={label} className="admin-panel">
+            <div className="admin-metric__label">{label}</div>
+            <div className="admin-metric__value">
               {typeof value === 'number' ? value.toLocaleString('ru') : value}
             </div>
-            <div style={{ color: '#059669', fontSize: 14 }}>{note}</div>
+            {note && <div className="admin-metric__note">{note}</div>}
           </div>
         ))}
       </section>
 
-      <section style={card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ margin: 0 }}>Пользователи</h2>
-          <span style={{ color: '#6b7280' }}>Роли, email и пароль</span>
+      <section className="admin-panel">
+        <div className="admin-panel__head">
+          <h2>Пользователи</h2>
+          <span className="admin-panel__hint">Роли, email и пароль</span>
         </div>
-        {userMessage && <div style={{ marginBottom: 12, color: '#0f766e', fontWeight: 600 }}>{userMessage}</div>}
-        <div style={{ overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {userMessage && <div className="admin-msg admin-msg--ok">{userMessage}</div>}
+        <div className="admin-table-wrap">
+          <table className="admin-table">
             <thead>
               <tr>
                 {['ID', 'ФИО', 'Email', 'Роль', 'Организация', 'Новый email', 'Новый пароль', ''].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '12px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: 13 }}>
-                    {h}
-                  </th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {users.map(u => (
                 <tr key={u.id}>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{u.id}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{u.fullName}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{u.email}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                  <td>{u.id}</td>
+                  <td>{u.fullName}</td>
+                  <td>{u.email}</td>
+                  <td>
                     <select
+                      className="admin-select"
                       value={u.role}
                       onChange={e => handleRoleChange(u.id, e.target.value as AdminUser['role'])}
-                      style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}
                     >
                       {ROLES.map(r => (
                         <option key={r} value={r}>{r}</option>
                       ))}
                     </select>
                   </td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{u.organization ?? '—'}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                  <td>{u.organization ?? '—'}</td>
+                  <td>
                     <input
                       type="email"
+                      className="admin-input"
                       value={userEdits[u.id]?.email ?? u.email}
                       onChange={e => setUserEdit(u.id, 'email', e.target.value)}
-                      style={{ width: '100%', minWidth: 160, padding: '8px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>
+                  <td>
                     <input
                       type="password"
+                      className="admin-input"
                       placeholder="мин. 8 символов"
                       value={userEdits[u.id]?.password ?? ''}
                       onChange={e => setUserEdit(u.id, 'password', e.target.value)}
-                      style={{ width: '100%', minWidth: 140, padding: '8px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleSaveCredentials(u.id)}
-                      style={{
-                        background: '#0f766e',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 8,
-                        padding: '8px 12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
+                  <td>
+                    <button type="button" className="admin-btn admin-btn--primary" onClick={() => handleSaveCredentials(u.id)}>
                       Сохранить
                     </button>
                   </td>
@@ -237,137 +213,117 @@ export function AdminPage() {
             </tbody>
           </table>
           {!loading && users.length === 0 && (
-            <div style={{ color: '#6b7280', padding: 16 }}>Пользователи не загружены</div>
+            <div className="admin-empty">Пользователи не загружены</div>
           )}
         </div>
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 20 }}>
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>ETL-импорт</h2>
-            <span style={{ color: '#6b7280' }}>Состояние источников</span>
+      <section className="admin-cols">
+        <div className="admin-panel">
+          <div className="admin-panel__head">
+            <h2>ETL-импорт</h2>
+            <span className="admin-panel__hint">Состояние источников</span>
           </div>
-          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
+          <p className="admin-etl-hint">
             Кнопка создаёт запись импорта в БД. Полный пайплайн:{' '}
-            <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 6 }}>python etl/test_etl_demo.py</code>
-            {' '}→ затем <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 6 }}>npx prisma db seed</code>.
-            Отчёт: <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 6 }}>etl/output/demo_report.html</code>
+            <code>python etl/test_etl_demo.py</code>
+            {' '}→ затем <code>npx prisma db seed</code>.
+            Отчёт: <code>etl/output/demo_report.html</code>
           </p>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <div className="admin-etl-form">
             <input
+              className="admin-input"
               value={source}
               onChange={e => setSource(e.target.value)}
               placeholder="Имя источника"
-              style={{ flex: 1, padding: '12px 14px', border: '1px solid #d1d5db', borderRadius: 12 }}
             />
-            <button
-              onClick={handleRun}
-              style={{ background: '#0f766e', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontWeight: 700 }}
-            >
+            <button type="button" className="admin-btn admin-btn--primary" onClick={handleRun}>
               Запуск ETL
             </button>
           </div>
-          {message && <div style={{ marginBottom: 12, color: '#0f766e', fontWeight: 600 }}>{message}</div>}
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          {message && <div className="admin-msg admin-msg--ok">{message}</div>}
+          <div className="admin-table-wrap">
+            <table className="admin-table">
               <thead>
                 <tr>
                   {['ID', 'Источник', 'Статус', 'Обработано', 'Ошибок', 'Время'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '12px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: 13 }}>
-                      {h}
-                    </th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {imports.map(row => (
                   <tr key={row.id}>
-                    <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.id}</td>
-                    <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.source}</td>
-                    <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>
-                      <span style={badge(row.status)}>{row.status}</span>
+                    <td>{row.id}</td>
+                    <td>{row.source}</td>
+                    <td>
+                      <span className={statusBadgeClass(row.status)}>{row.status}</span>
                     </td>
-                    <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.recordsProcessed}</td>
-                    <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.recordsFailed}</td>
-                    <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.startedAt}</td>
+                    <td>{row.recordsProcessed}</td>
+                    <td>{row.recordsFailed}</td>
+                    <td>{row.startedAt}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-        <div style={{ ...card, display: 'grid', gap: 16, alignContent: 'start' }}>
-          <div><h2 style={{ margin: '0 0 8px' }}>Последние запросы</h2></div>
+
+        <div className="admin-panel admin-side-stack">
+          <h2 className="admin-side-title">Последние запросы</h2>
           {recentQueries.map(x => (
-            <div key={x.name} style={{ padding: 14, border: '1px solid #e5e7eb', borderRadius: 16 }}>
-              <div style={{ fontWeight: 700 }}>{x.name}</div>
-              <div style={{ color: '#6b7280' }}>{x.subtitle}</div>
+            <div key={x.name} className="admin-query-card">
+              <div className="admin-query-card__name">{x.name}</div>
+              <div className="admin-query-card__sub">{x.subtitle}</div>
             </div>
           ))}
           {statsError && (
-            <div style={{ padding: 16, borderRadius: 16, background: '#fef2f2', color: '#991b1b' }}>
-              Не удалось загрузить данные с backend API.
-            </div>
+            <div className="admin-msg admin-msg--err">Не удалось загрузить данные с backend API.</div>
           )}
           {!statsError && !loading && recentQueries.length === 0 && (
-            <div style={{ color: '#6b7280', fontSize: 14 }}>Запросов пока нет.</div>
+            <div className="admin-empty">Запросов пока нет.</div>
           )}
         </div>
       </section>
 
-      <section style={card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ margin: 0 }}>Журнал аудита</h2>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button
-              type="button"
-              onClick={() => loadAudit()}
-              style={{
-                background: '#f3f4f6',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: 8,
-                padding: '8px 12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
+      <section className="admin-panel">
+        <div className="admin-panel__head">
+          <h2>Журнал аудита</h2>
+          <div className="admin-head-actions">
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={() => loadAudit()}>
               Обновить
             </button>
-            <span style={{ color: '#6b7280' }}>Только для администратора</span>
+            <span className="admin-panel__hint">Только для администратора</span>
           </div>
         </div>
         {auditError && (
-          <div style={{ marginBottom: 12, padding: 12, borderRadius: 12, background: '#fef2f2', color: '#991b1b' }}>
+          <div className="admin-msg admin-msg--err">
             Не удалось загрузить журнал аудита. Проверьте, что backend запущен и вы вошли как ADMIN.
           </div>
         )}
-        <div style={{ overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
             <thead>
               <tr>
                 {['Время', 'Пользователь', 'Действие', 'Сущность', 'IP'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '12px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontSize: 13 }}>
-                    {h}
-                  </th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {audit.map((row, idx) => (
                 <tr key={idx}>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.time}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.user}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.action}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.entity}</td>
-                  <td style={{ padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>{row.ip}</td>
+                  <td>{row.time}</td>
+                  <td>{row.user}</td>
+                  <td>{row.action}</td>
+                  <td>{row.entity}</td>
+                  <td>{row.ip}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!loading && !auditError && audit.length === 0 && (
-            <div style={{ color: '#6b7280', padding: 16 }}>Записей аудита пока нет. Выполните вход, поиск или запуск ETL.</div>
+            <div className="admin-empty">Записей аудита пока нет. Выполните вход, поиск или запуск ETL.</div>
           )}
         </div>
       </section>

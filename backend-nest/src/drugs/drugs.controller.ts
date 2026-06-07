@@ -5,12 +5,6 @@ import { Roles } from '../auth/guards/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { DrugsService } from './drugs.service';
 
-/**
- * Разграничение ролей:
- *   PHARMACIST — чтение каталога, поиска, карточки, аналогов (без клинических операций)
- *   DOCTOR     — то же + проверка взаимодействий + противопоказания
- *   ADMIN      — полный доступ ко всему
- */
 @ApiTags('drugs')
 @Controller()
 export class DrugsController {

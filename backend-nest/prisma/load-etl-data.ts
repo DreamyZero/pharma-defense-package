@@ -1,6 +1,3 @@
-/**
- * Загрузка etl/data/processed/*.csv в PostgreSQL.
- */
 import { PrismaClient, InteractionSeverity } from '@prisma/client';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -51,7 +48,6 @@ function readCsv(name: string): CsvRow[] {
   return parseCsv(readFileSync(path, 'utf-8'));
 }
 
-/** Основной источник полей препарата — JSON каталога (40 позиций, без поломки CSV). */
 function readCatalogRows(): CsvRow[] {
   if (!existsSync(CATALOG_JSON)) {
     return readCsv('drugs.csv');
@@ -214,7 +210,6 @@ export async function loadEtlData(): Promise<void> {
     }
   }
 
-  // Показания
   await prisma.drugIndication.deleteMany({
     where: { drugId: { in: [...etlIdToDbId.values()] } },
   });
@@ -226,7 +221,6 @@ export async function loadEtlData(): Promise<void> {
     });
   }
 
-  // Синонимы → SubstanceSynonym
   const substanceByDrug = new Map<number, number>();
   for (const [etlId, dbId] of etlIdToDbId) {
     const link = await prisma.drugSubstance.findFirst({
@@ -246,7 +240,6 @@ export async function loadEtlData(): Promise<void> {
     });
   }
 
-  // Противопоказания
   await prisma.contraindication.deleteMany({
     where: { drugId: { in: [...etlIdToDbId.values()] } },
   });
@@ -265,7 +258,6 @@ export async function loadEtlData(): Promise<void> {
     });
   }
 
-  // Аналоги (создаём целевой препарат-заглушку, если ещё нет)
   for (const row of readCsv('analogs.csv')) {
     const sourceId = etlIdToDbId.get(row.drug_id);
     if (!sourceId || !row.analog_name) continue;
@@ -298,7 +290,6 @@ export async function loadEtlData(): Promise<void> {
     });
   }
 
-  // Взаимодействия
   for (const row of readCsv('interactions.csv')) {
     const drugAId = etlIdToDbId.get(row.drug_id);
     if (!drugAId || !row.with_name) continue;

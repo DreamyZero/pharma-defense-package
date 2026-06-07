@@ -1,6 +1,3 @@
-/**
- * Синхронизация PostgreSQL → Neo4j (упрощённая копия GraphService.syncFromPostgres).
- */
 import neo4j, { Driver } from 'neo4j-driver';
 import { PrismaClient } from '@prisma/client';
 

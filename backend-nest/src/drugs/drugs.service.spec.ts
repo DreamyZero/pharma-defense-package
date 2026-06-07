@@ -2,6 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DrugsService } from './drugs.service';
 import { PrismaService } from '../database/prisma.service';
 import { PharmaRepository } from '../domain/pharma.repository';
+import { AuditService } from '../audit/audit.service';
+
+const mockAudit = {
+  log: jest.fn().mockResolvedValue(undefined),
+  logSafe: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   drug: {
@@ -30,14 +36,13 @@ describe('DrugsService', () => {
         DrugsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: PharmaRepository, useValue: mockRepo },
+        { provide: AuditService, useValue: mockAudit },
       ],
     }).compile();
 
     service = module.get<DrugsService>(DrugsService);
     jest.clearAllMocks();
   });
-
-  // ── search ────────────────────────────────────────────────────────────────
 
   describe('search()', () => {
     it('возвращает пустой массив если запрос короче 2 символов', async () => {
@@ -46,41 +51,53 @@ describe('DrugsService', () => {
       expect(mockPrisma.drug.findMany).not.toHaveBeenCalled();
     });
 
-    it('возвращает результаты из Prisma если они есть', async () => {
-      const dbResult = [{ id: 1, name: 'Аспирин', substances: [] }];
+    it('возвращает полные карточки из Prisma если они есть', async () => {
+      const dbResult = [
+        {
+          id: 1,
+          name: 'Аспирин',
+          registrationNumber: 'ЛП-000001',
+          manufacturer: 'Фармзавод',
+          atcCode: 'C01EB02',
+          pharmacologicalGroup: 'НПВС',
+          description: 'Нестероидный противовоспалительный препарат для снижения боли и жара.',
+          instructionMeta: { dosageAdult: '500 мг 3 раза в сутки', indicationsList: ['боль'] },
+          substances: [{ substance: { name: 'Ацетилсалициловая кислота' } }],
+          indications: [{ name: 'боль' }],
+        },
+      ];
       mockPrisma.drug.findMany.mockResolvedValue(dbResult);
 
       const result = await service.search('аспирин');
       expect(result).toEqual(dbResult);
       expect(mockPrisma.drug.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 20 }),
+        expect.objectContaining({ take: 50 }),
+      );
+      expect(mockAudit.logSafe).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'DRUG_SEARCH', newValues: expect.objectContaining({ source: 'database' }) }),
       );
     });
 
-    it('fallback на PharmaRepository если Prisma вернула пустой массив', async () => {
-      mockPrisma.drug.findMany.mockResolvedValue([]);
-      mockRepo.search.mockReturnValue([
-        { id: 99, name: 'Аспирин', atc: 'B01AC06', group: 'НПВС', substance: 'Ацетилсалициловая кислота' },
-      ]);
+    it('fallback на локальные данные если Prisma вернула неполные карточки', async () => {
+      mockPrisma.drug.findMany.mockResolvedValue([{ id: 99, name: 'Аспирин', substances: [] }]);
 
       const result = await service.search('аспирин');
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Аспирин');
       expect(result[0].slug).toBe('аспирин');
+      expect(mockAudit.logSafe).toHaveBeenCalledWith(
+        expect.objectContaining({ newValues: expect.objectContaining({ source: 'local' }) }),
+      );
     });
 
-    it('fallback на PharmaRepository если Prisma выбросила исключение', async () => {
+    it('fallback на локальные данные если Prisma выбросила исключение', async () => {
       mockPrisma.drug.findMany.mockRejectedValue(new Error('DB error'));
-      mockRepo.search.mockReturnValue([
-        { id: 1, name: 'Парацетамол', atc: 'N02BE01', group: 'Анальгетики', substance: 'Парацетамол' },
-      ]);
 
-      const result = await service.search('парацетамол');
+      const result = await service.search('аспирин');
       expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Аспирин');
     });
   });
-
-  // ── getBySlug ─────────────────────────────────────────────────────────────
 
   describe('getBySlug()', () => {
     it('возвращает препарат из Prisma по slug', async () => {
@@ -107,8 +124,6 @@ describe('DrugsService', () => {
       expect(result).toBeNull();
     });
   });
-
-  // ── interactions ──────────────────────────────────────────────────────────
 
   describe('interactions()', () => {
     it('возвращает пустой массив если передан один препарат', async () => {
@@ -143,8 +158,6 @@ describe('DrugsService', () => {
     });
   });
 
-  // ── contra ────────────────────────────────────────────────────────────────
-
   describe('contra()', () => {
     it('возвращает предупреждение при нарушении возрастного ограничения (minAge)', async () => {
       mockPrisma.drug.findFirst.mockResolvedValue({
@@ -178,8 +191,6 @@ describe('DrugsService', () => {
       expect(result.warnings).toEqual([]);
     });
   });
-
-  // ── dashboard ─────────────────────────────────────────────────────────────
 
   describe('dashboard()', () => {
     it('возвращает метрики с данными из Prisma', async () => {

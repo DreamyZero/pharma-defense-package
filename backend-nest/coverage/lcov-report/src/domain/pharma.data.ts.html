@@ -1,0 +1,106 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/domain/pharma.data.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/domain</a> pharma.data.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>1/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>1/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const drugs = [
+  { id:1,name:'Аспирин',substance:'Ацетилсалициловая кислота',atc:'C01EB02',group:'НПВС',indications:['боль','жар','тромбоз'],contraindications:['язвенная болезнь','детский возраст'],sideEffects:['диспепсия','кровотечение'],analogs:['Аспикор','Тромбо АСС'],synonyms:['ацетилсалициловая кислота','аспикор','тромбо асс'],interactions:[{with:'Варфарин',risk:'high',note:'Повышается риск кровотечения'}] },
+  { id:2,name:'Метформин',substance:'Метформина гидрохлорид',atc:'A10BA02',group:'Гипогликемические средства',indications:['диабет','гипергликемия'],contraindications:['почечная недостаточность'],sideEffects:['тошнота','лактацидоз'],analogs:['Глюкофаж','Сиофор'],synonyms:['метформина гидрохлорид','глюкофаж'],interactions:[{with:'Йодсодержащие контрасты',risk:'high',note:'Риск лактацидоза'}] },
+  { id:3,name:'Лизиноприл',substance:'Лизиноприл',atc:'C09AA03',group:'Ингибиторы АПФ',indications:['гипертензия','сердечная недостаточность'],contraindications:['беременность','детский возраст'],sideEffects:['кашель','гипотензия'],analogs:['Диротон','Лизорил'],synonyms:['диротон','лизорил'],interactions:[{with:'Спиронолактон',risk:'medium',note:'Риск гиперкалиемии'}] },
+  { id:4,name:'Варфарин',substance:'Варфарин',atc:'B01AA03',group:'Антикоагулянты',indications:['тромбоз','фибрилляция предсердий'],contraindications:['беременность'],sideEffects:['кровотечение','анемия'],analogs:['Варфарекс'],synonyms:['варфарекс'],interactions:[{with:'Аспирин',risk:'high',note:'Повышается риск кровотечения'}] },
+  { id:5,name:'Ибупрофен',substance:'Ибупрофен',atc:'M01AE01',group:'НПВС',indications:['боль','воспаление','жар'],contraindications:['язвенная болезнь'],sideEffects:['гастропатия','отеки'],analogs:['Нурофен','Миг'],synonyms:['нурофен','миг'],interactions:[{with:'Аспирин',risk:'medium',note:'Снижается антиагрегантный эффект'}] }
+];
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-06-07T10:38:53.387Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

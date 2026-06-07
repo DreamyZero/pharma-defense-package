@@ -3,7 +3,12 @@ import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../database/prisma.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import * as bcrypt from 'bcryptjs';
+
+const mockAudit = {
+  log: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   user: {
@@ -25,14 +30,13 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwt },
+        { provide: AuditService, useValue: mockAudit },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     jest.clearAllMocks();
   });
-
-  // ── register ──────────────────────────────────────────────────────────────
 
   describe('register()', () => {
     it('успешно регистрирует нового пользователя и возвращает токен', async () => {
@@ -53,6 +57,9 @@ describe('AuthService', () => {
       expect(result.access_token).toBe('mock.jwt.token');
       expect(result.role).toBe('DOCTOR');
       expect(result.userId).toBe(1);
+      expect(mockAudit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'USER_REGISTER', entityType: 'User' }),
+      );
     });
 
     it('хэширует пароль перед сохранением в базу данных', async () => {
@@ -97,8 +104,6 @@ describe('AuthService', () => {
     });
   });
 
-  // ── login ─────────────────────────────────────────────────────────────────
-
   describe('login()', () => {
     it('успешно возвращает токен при корректных учётных данных', async () => {
       const passwordHash = await bcrypt.hash('correctPass', 10);
@@ -116,6 +121,9 @@ describe('AuthService', () => {
 
       expect(result.access_token).toBe('mock.jwt.token');
       expect(result.role).toBe('PHARMACIST');
+      expect(mockAudit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'USER_LOGIN', userId: 1 }),
+      );
     });
 
     it('выбрасывает UnauthorizedException если пользователь не найден', async () => {
@@ -140,8 +148,6 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
   });
-
-  // ── profile ───────────────────────────────────────────────────────────────
 
   describe('profile()', () => {
     it('возвращает профиль пользователя без поля passwordHash', async () => {

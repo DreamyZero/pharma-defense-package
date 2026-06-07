@@ -51,12 +51,10 @@ export class AuditService {
     }
   }
 
-  /** Запись аудита без прерывания основного сценария (поиск, карточки). */
   async logSafe(data: Parameters<AuditService['log']>[0]) {
     try {
       await this.log(data);
     } catch {
-      /* ошибка уже залогирована в log() */
     }
   }
 }

@@ -59,9 +59,6 @@ export class ImportsService {
     return { message: 'ETL import started', job: { ...job, auditId: auditEntry.id } };
   }
 
-  /**
-   * Читает etl/output/etl_status.json (пишется run_etl.py).
-   */
   getEtlStatus(): EtlStatus {
     const statusPath = join(__dirname, '..', '..', '..', '..', 'etl', 'output', 'etl_status.json');
     try {

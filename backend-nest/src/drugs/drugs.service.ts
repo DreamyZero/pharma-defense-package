@@ -29,8 +29,6 @@ export class DrugsService {
     private audit: AuditService,
   ) {}
 
-  // ── helpers ───────────────────────────────────────────────────────────────
-
   private localBySlug(slug: string): LocalDrug | undefined {
     return (localDrugs as LocalDrug[]).find(
       d => d.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase(),
@@ -77,8 +75,6 @@ export class DrugsService {
       interactionB: dbDrug['interactionB'] ?? [],
     };
   }
-
-  // ── routes ────────────────────────────────────────────────────────────────
 
   private isCompleteCatalogDrug(drug: {
     registrationNumber?: string | null;

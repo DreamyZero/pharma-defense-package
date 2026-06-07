@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import neo4j, { Driver, Session, Record as Neo4jRecord } from 'neo4j-driver';
 
-export const NEO4J_DRIVER = 'NEO4J_DRIVER'; // ← перенеси сюда
+export const NEO4J_DRIVER = 'NEO4J_DRIVER';
 
 @Injectable()
 export class Neo4jService implements OnModuleDestroy {

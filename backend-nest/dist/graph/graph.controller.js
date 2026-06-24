@@ -22,7 +22,7 @@ let GraphController = class GraphController {
     constructor(graphService) {
         this.graphService = graphService;
     }
-    fullGraph(limit = '60') {
+    fullGraph(limit = '30') {
         return this.graphService.getFullGraph(parseInt(limit, 10));
     }
     drugGraph(id) {
@@ -38,7 +38,7 @@ let GraphController = class GraphController {
 exports.GraphController = GraphController;
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Полный граф знаний (препараты, вещества, группы)' }),
-    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, example: 60 }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, example: 30 }),
     (0, common_1.Get)('full'),
     __param(0, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
@@ -46,7 +46,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], GraphController.prototype, "fullGraph", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'Граф соседей конкретного препарата' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Граф соседей препарата (id, slug или название)' }),
     (0, common_1.Get)('drug/:id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),

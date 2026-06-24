@@ -31,6 +31,18 @@ export class AuditService {
     }));
   }
 
+  async clear(userId?: number, ipAddress?: string): Promise<{ deleted: number }> {
+    const { count } = await this.prisma.auditLog.deleteMany();
+    await this.log({
+      userId,
+      action: 'AUDIT_CLEAR',
+      entityType: 'AuditLog',
+      ipAddress,
+      newValues: { deleted: count },
+    });
+    return { deleted: count };
+  }
+
   async log(data: {
     userId?: number;
     action: string;

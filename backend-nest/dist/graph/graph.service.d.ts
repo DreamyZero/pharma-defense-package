@@ -3,7 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 export interface GraphNode {
     id: string;
     label: string;
-    type: 'Drug' | 'Substance' | 'Group' | 'Indication' | 'Contraindication';
+    type: 'Drug' | 'Substance' | 'Group' | 'Indication' | 'Contraindication' | 'Synonym';
     atcCode?: string;
 }
 export interface GraphEdge {
@@ -18,11 +18,13 @@ export declare class GraphService {
     private readonly logger;
     constructor(driver: Driver, prisma: PrismaService);
     private run;
+    private resolveDrugId;
+    private resolveDrugNames;
     getFullGraph(limit?: number): Promise<{
         nodes: GraphNode[];
         edges: GraphEdge[];
     }>;
-    getDrugGraph(drugId: string): Promise<{
+    getDrugGraph(idOrSlug: string): Promise<{
         nodes: GraphNode[];
         edges: GraphEdge[];
     }>;

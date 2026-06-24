@@ -26,11 +26,26 @@ let ImportsController = class ImportsController {
     list() {
         return this.importsService.list();
     }
+    clear(req) {
+        return this.importsService.clearImports(req.user?.userId, req.ip);
+    }
     run(body, req) {
         return this.importsService.run(body.source || 'manual_demo_job', req.user?.userId, req.ip);
     }
+    syncReport() {
+        return this.importsService.syncFromFilesystem();
+    }
     getStatus() {
         return this.importsService.getEtlStatus();
+    }
+    getReport() {
+        return this.importsService.getEtlReport();
+    }
+    getReportHtml() {
+        return this.importsService.getEtlReportHtml();
+    }
+    getReportCsv() {
+        return this.importsService.getEtlReportCsv();
     }
 };
 exports.ImportsController = ImportsController;
@@ -44,6 +59,15 @@ __decorate([
 ], ImportsController.prototype, "list", null);
 __decorate([
     (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Очистить журнал импортов (только ADMIN)' }),
+    (0, common_1.Delete)(),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ImportsController.prototype, "clear", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Запустить ETL импорт (только ADMIN)' }),
     (0, common_1.Post)('run'),
     (0, common_1.HttpCode)(200),
@@ -55,12 +79,48 @@ __decorate([
 ], ImportsController.prototype, "run", null);
 __decorate([
     (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Синхронизировать отчёт ETL из etl/output' }),
+    (0, common_1.Post)('sync'),
+    (0, common_1.HttpCode)(200),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ImportsController.prototype, "syncReport", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Статус последнего ETL (etl_status.json)' }),
     (0, common_1.Get)('status'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ImportsController.prototype, "getStatus", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Сводный отчёт ETL (JSON)' }),
+    (0, common_1.Get)('report'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ImportsController.prototype, "getReport", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'HTML-отчёт ETL (demo_report.html)' }),
+    (0, common_1.Get)('report/html'),
+    (0, common_1.Header)('Content-Type', 'text/html; charset=utf-8'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ImportsController.prototype, "getReportHtml", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'CSV-отчёт ETL (etl_report.csv)' }),
+    (0, common_1.Get)('report/csv'),
+    (0, common_1.Header)('Content-Type', 'text/csv; charset=utf-8'),
+    (0, common_1.Header)('Content-Disposition', 'attachment; filename="etl_report.csv"'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ImportsController.prototype, "getReportCsv", null);
 exports.ImportsController = ImportsController = __decorate([
     (0, swagger_1.ApiTags)('imports'),
     (0, swagger_1.ApiBearerAuth)(),

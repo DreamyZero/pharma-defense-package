@@ -7,5 +7,6 @@ import { Neo4jModule } from './neo4j/neo4j.module';
   imports: [Neo4jModule],
   controllers: [GraphController],
   providers: [GraphService],
+  exports: [GraphService],
 })
 export class GraphModule {}

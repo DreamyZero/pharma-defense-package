@@ -4,7 +4,12 @@ import { join } from 'path';
 
 const prisma = new PrismaClient();
 
-const PROCESSED_DIR = join(__dirname, '..', '..', 'etl', 'data', 'processed');
+function resolveProcessedDir(): string {
+  if (process.env.ETL_PROCESSED_DIR) return process.env.ETL_PROCESSED_DIR;
+  if (process.env.ETL_DIR) return join(process.env.ETL_DIR, 'data', 'processed');
+  return join(__dirname, '..', '..', 'etl', 'data', 'processed');
+}
+
 const CATALOG_JSON = join(__dirname, '..', '..', 'etl', 'data', 'samples', 'drugs_catalog.json');
 
 type CsvRow = Record<string, string>;
@@ -40,7 +45,7 @@ function parseCsv(text: string): CsvRow[] {
 }
 
 function readCsv(name: string): CsvRow[] {
-  const path = join(PROCESSED_DIR, name);
+  const path = join(resolveProcessedDir(), name);
   if (!existsSync(path)) {
     console.warn(`⚠️  ${path} не найден, пропуск`);
     return [];
@@ -48,9 +53,23 @@ function readCsv(name: string): CsvRow[] {
   return parseCsv(readFileSync(path, 'utf-8'));
 }
 
+function tradeNameFromRow(row: CsvRow): string {
+  return String(row.trade_name ?? row.name ?? '').trim();
+}
+
+function slugFromRow(row: CsvRow, tradeName: string): string {
+  const explicit = String(row.slug ?? '').trim();
+  if (explicit) return explicit;
+  return tradeName.toLowerCase().replace(/\s+/g, '-');
+}
+
 function readCatalogRows(): CsvRow[] {
+  const fromProcessed = readCsv('drugs.csv');
+  if (fromProcessed.length > 0) {
+    return fromProcessed.filter(row => tradeNameFromRow(row).length > 0);
+  }
   if (!existsSync(CATALOG_JSON)) {
-    return readCsv('drugs.csv');
+    return [];
   }
   const items = JSON.parse(readFileSync(CATALOG_JSON, 'utf-8')) as Record<string, string>[];
   return items.map((item, index) => {
@@ -162,12 +181,18 @@ export async function loadEtlData(): Promise<void> {
   console.log(`📦 Загрузка ${drugsRows.length} препаратов...`);
 
   for (const row of drugsRows) {
-    const slug = row.slug || row.trade_name.toLowerCase().replace(/\s+/g, '-');
+    const tradeName = tradeNameFromRow(row);
+    if (!tradeName) {
+      console.warn(`⚠️  Пропуск строки без названия (drug_id=${row.drug_id ?? '?'})`);
+      continue;
+    }
+
+    const slug = slugFromRow(row, tradeName);
     const instr = buildInstructionPayload(row);
     const drug = await prisma.drug.upsert({
       where: { slug },
       update: {
-        name: row.trade_name,
+        name: tradeName,
         atcCode: row.atc || null,
         pharmacologicalGroup: row.group || null,
         manufacturer: instr.manufacturer,
@@ -179,7 +204,7 @@ export async function loadEtlData(): Promise<void> {
         active: true,
       },
       create: {
-        name: row.trade_name,
+        name: tradeName,
         slug,
         atcCode: row.atc || null,
         pharmacologicalGroup: row.group || null,
@@ -193,8 +218,8 @@ export async function loadEtlData(): Promise<void> {
       },
     });
 
-    etlIdToDbId.set(row.drug_id, drug.id);
-    nameToDbId.set(row.trade_name.toLowerCase(), drug.id);
+    etlIdToDbId.set(String(row.drug_id ?? drug.id), drug.id);
+    nameToDbId.set(tradeName.toLowerCase(), drug.id);
 
     if (row.substance) {
       const substance = await prisma.substance.upsert({
@@ -260,22 +285,23 @@ export async function loadEtlData(): Promise<void> {
 
   for (const row of readCsv('analogs.csv')) {
     const sourceId = etlIdToDbId.get(row.drug_id);
-    if (!sourceId || !row.analog_name) continue;
+    const analogName = String(row.analog_name ?? '').trim();
+    if (!sourceId || !analogName) continue;
 
-    let targetId = nameToDbId.get(row.analog_name.toLowerCase());
+    let targetId = nameToDbId.get(analogName.toLowerCase());
     if (!targetId) {
-      const slug = row.analog_name.toLowerCase().replace(/\s+/g, '-');
+      const slug = analogName.toLowerCase().replace(/\s+/g, '-');
       const created = await prisma.drug.upsert({
         where: { slug },
-        update: { name: row.analog_name },
+        update: { name: analogName },
         create: {
-          name: row.analog_name,
+          name: analogName,
           slug,
           active: false,
         },
       });
       targetId = created.id;
-      nameToDbId.set(row.analog_name.toLowerCase(), targetId);
+      nameToDbId.set(analogName.toLowerCase(), targetId);
     }
 
     await prisma.drugAnalog.upsert({
@@ -292,8 +318,9 @@ export async function loadEtlData(): Promise<void> {
 
   for (const row of readCsv('interactions.csv')) {
     const drugAId = etlIdToDbId.get(row.drug_id);
-    if (!drugAId || !row.with_name) continue;
-    const drugBId = nameToDbId.get(row.with_name.toLowerCase());
+    const withName = String(row.with_name ?? '').trim();
+    if (!drugAId || !withName) continue;
+    const drugBId = nameToDbId.get(withName.toLowerCase());
     if (!drugBId || drugAId === drugBId) continue;
 
     const [aId, bId] = drugAId < drugBId ? [drugAId, drugBId] : [drugBId, drugAId];
@@ -303,7 +330,7 @@ export async function loadEtlData(): Promise<void> {
         severity: mapSeverity(row.risk_level || 'low'),
         clinicalEffect: row.note || null,
         recommendation: row.note || null,
-        source: 'etl',
+        source: row.source || 'etl',
       },
       create: {
         drugAId: aId,
@@ -311,7 +338,7 @@ export async function loadEtlData(): Promise<void> {
         severity: mapSeverity(row.risk_level || 'low'),
         clinicalEffect: row.note || null,
         recommendation: row.note || null,
-        source: 'etl',
+        source: row.source || 'etl',
       },
     });
   }

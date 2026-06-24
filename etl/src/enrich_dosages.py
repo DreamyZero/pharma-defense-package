@@ -1,7 +1,3 @@
-"""
-Заполнение реалистичных дозировок в drugs_catalog.json (вместо «По инструкции»).
-Вызывается из parse_sources.py перед записью drugs_raw.csv.
-"""
 from __future__ import annotations
 
 import json

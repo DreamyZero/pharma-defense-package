@@ -43,7 +43,6 @@ class AuthStore {
     return this.role === 'ADMIN';
   }
 
-  /** Редактирование своего профиля — только врач и фармацевт */
   get canEditProfile() {
     return this.role === 'DOCTOR' || this.role === 'PHARMACIST';
   }

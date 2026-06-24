@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import * as d3 from 'd3';
+import { authStore } from '../../stores/auth.store';
 import { graphStore, GraphNode, GraphEdge } from '../../stores/graph.store';
 import './GraphPage.css';
 
@@ -10,6 +11,7 @@ const NODE_COLORS: Record<string, string> = {
   Group: 'var(--node-group)',
   Indication: 'var(--node-indication)',
   Contraindication: 'var(--node-contraindication)',
+  Synonym: 'var(--node-synonym)',
 };
 
 const EDGE_COLORS: Record<string, string> = {
@@ -21,6 +23,8 @@ const EDGE_COLORS: Record<string, string> = {
   BELONGS_TO: '#7c3aed',
   HAS_INDICATION: '#059669',
   HAS_CONTRAINDICATION: '#c0392b',
+  ANALOG_OF: '#6366f1',
+  HAS_SYNONYM: '#0d9488',
 };
 
 function getEdgeColor(edge: GraphEdge): string {
@@ -37,9 +41,48 @@ const LEGEND = [
   { type: 'Group', label: 'Фарм. группа' },
   { type: 'Indication', label: 'Показание' },
   { type: 'Contraindication', label: 'Противопок.' },
+  { type: 'Synonym', label: 'Синоним' },
 ];
 
 const GRAPH_HEIGHT = 560;
+
+function layoutNodesInitial(nodes: any[], width: number, height: number) {
+  const cx = width / 2;
+  const cy = height / 2;
+  const spread = Math.min(width, height) * 0.32;
+  nodes.forEach((node, index) => {
+    const angle = (2 * Math.PI * index) / nodes.length;
+    node.x = cx + spread * Math.cos(angle);
+    node.y = cy + spread * Math.sin(angle);
+  });
+}
+
+function fitGraphToView(
+  svg: d3.Selection<SVGSVGElement, unknown, null, undefined>,
+  zoom: d3.ZoomBehavior<SVGSVGElement, unknown>,
+  group: d3.Selection<SVGGElement, unknown, null, undefined>,
+  width: number,
+  height: number,
+) {
+  const bounds = group.node()?.getBBox();
+  if (!bounds?.width || !bounds?.height) return;
+
+  const padding = 56;
+  const scale = Math.min(
+    2.5,
+    Math.max(
+      0.35,
+      Math.min((width - padding) / bounds.width, (height - padding) / bounds.height),
+    ),
+  );
+  const tx = width / 2 - scale * (bounds.x + bounds.width / 2);
+  const ty = height / 2 - scale * (bounds.y + bounds.height / 2);
+
+  svg
+    .transition()
+    .duration(450)
+    .call(zoom.transform as any, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
 
 const GraphPage: React.FC = observer(() => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -47,7 +90,8 @@ const GraphPage: React.FC = observer(() => {
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [interactionInput, setInteractionInput] = useState('');
   const [interactionList, setInteractionList] = useState<string[]>([]);
-  const [limitVal, setLimitVal] = useState(60);
+  const [drugSearchInput, setDrugSearchInput] = useState('');
+  const [limitVal, setLimitVal] = useState(30);
 
   useEffect(() => {
     graphStore.loadFullGraph(limitVal);
@@ -60,9 +104,8 @@ const GraphPage: React.FC = observer(() => {
     const { nodes, edges } = graphStore;
     if (nodes.length === 0) return;
 
-    // Use container width but fixed height constant to avoid 0px on first render
     const W = containerRef.current.clientWidth || 800;
-    const H = GRAPH_HEIGHT;
+    const H = containerRef.current.clientHeight || GRAPH_HEIGHT;
 
     d3.select(svgRef.current).selectAll('*').remove();
 
@@ -96,7 +139,8 @@ const GraphPage: React.FC = observer(() => {
       .on('zoom', (event) => g.attr('transform', event.transform));
     svg.call(zoom as any);
 
-    const simNodes: any[] = nodes.map((n) => ({ ...n, x: W / 2, y: H / 2 }));
+    const simNodes: any[] = nodes.map((n) => ({ ...n }));
+    layoutNodesInitial(simNodes, W, H);
     const nodeById = new Map(simNodes.map((n) => [n.id, n]));
     const simEdges: any[] = edges
       .filter((e) => nodeById.has(e.source) && nodeById.has(e.target))
@@ -104,10 +148,17 @@ const GraphPage: React.FC = observer(() => {
 
     const simulation = d3
       .forceSimulation(simNodes)
-      .force('link', d3.forceLink(simEdges).id((d: any) => d.id).distance(100).strength(0.4))
-      .force('charge', d3.forceManyBody().strength(-220))
-      .force('center', d3.forceCenter(W / 2, H / 2))
-      .force('collision', d3.forceCollide(32));
+      .force(
+        'link',
+        d3
+          .forceLink(simEdges)
+          .id((d: any) => d.id)
+          .distance((d: any) => (d.type === 'INTERACTS_WITH' ? 90 : 55))
+          .strength(0.85),
+      )
+      .force('charge', d3.forceManyBody().strength(-85).distanceMax(220))
+      .force('center', d3.forceCenter(W / 2, H / 2).strength(0.18))
+      .force('collision', d3.forceCollide((d: any) => (d.type === 'Drug' ? 34 : 24)));
 
     const link = g
       .append('g')
@@ -182,6 +233,8 @@ const GraphPage: React.FC = observer(() => {
       node.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
     });
 
+    simulation.on('end', () => fitGraphToView(svg, zoom, g, W, H));
+
     return () => {
       simulation.stop();
     };
@@ -205,6 +258,22 @@ const GraphPage: React.FC = observer(() => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Перезагрузить
           </button>
+          {authStore.isAdmin && (
+            <button
+              className="btn btn-primary"
+              disabled={graphStore.isSyncing}
+              onClick={() => graphStore.syncFromPostgres()}
+            >
+              {graphStore.isSyncing ? (
+                'Синхронизация…'
+              ) : (
+                <>
+                  <span className="graph-btn-label--long">Синхронизировать</span>
+                  <span className="graph-btn-label--short">Синхро</span>
+                </>
+              )}
+            </button>
+          )}
           <div className="graph-limit-ctrl">
             <label htmlFor="limit" className="text-sm text-muted">Узлов:</label>
             <select
@@ -270,14 +339,44 @@ const GraphPage: React.FC = observer(() => {
               <span className="legend-line" style={{ background: '#059669' }} />
               <span>Взаим. — низкий</span>
             </div>
+            <div className="legend-item">
+              <span className="legend-line" style={{ background: '#6366f1' }} />
+              <span>Аналог</span>
+            </div>
           </div>
 
           <div className="graph-filter">
-            <h3 className="section-title" style={{ fontSize: 'var(--text-sm)', marginTop: 'var(--sp-6)' }}>Граф взаимодействий</h3>
+            <h3 className="section-title" style={{ fontSize: 'var(--text-sm)', marginTop: 'var(--sp-6)' }}>Препарат по названию</h3>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--sp-3)' }}>
+              ID, slug или часть названия из каталога
+            </p>
+            <div className="graph-filter__row">
+              <input
+                className="input"
+                placeholder="Например: аспирин"
+                value={drugSearchInput}
+                onChange={(e) => setDrugSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && drugSearchInput.trim()) {
+                    graphStore.loadDrugGraph(drugSearchInput.trim());
+                  }
+                }}
+              />
+              <button
+                className="btn btn-primary"
+                style={{ padding: '0 var(--sp-3)' }}
+                disabled={!drugSearchInput.trim()}
+                onClick={() => graphStore.loadDrugGraph(drugSearchInput.trim())}
+              >
+                Найти
+              </button>
+            </div>
+
+            <h3 className="section-title" style={{ fontSize: 'var(--text-sm)' }}>Граф взаимодействий</h3>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--sp-3)' }}>
               Добавьте 2+ препарата и постройте граф
             </p>
-            <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+            <div className="graph-filter__row graph-filter__row--compact">
               <input
                 className="input"
                 placeholder="Название препарата"

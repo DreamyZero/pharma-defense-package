@@ -12,13 +12,13 @@ export class GraphController {
   constructor(private readonly graphService: GraphService) {}
 
   @ApiOperation({ summary: 'Полный граф знаний (препараты, вещества, группы)' })
-  @ApiQuery({ name: 'limit', required: false, example: 60 })
+  @ApiQuery({ name: 'limit', required: false, example: 30 })
   @Get('full')
-  fullGraph(@Query('limit') limit = '60') {
+  fullGraph(@Query('limit') limit = '30') {
     return this.graphService.getFullGraph(parseInt(limit, 10));
   }
 
-  @ApiOperation({ summary: 'Граф соседей конкретного препарата' })
+  @ApiOperation({ summary: 'Граф соседей препарата (id, slug или название)' })
   @Get('drug/:id')
   drugGraph(@Param('id') id: string) {
     return this.graphService.getDrugGraph(id);

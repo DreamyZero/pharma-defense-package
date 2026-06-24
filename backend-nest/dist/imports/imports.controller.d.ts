@@ -19,6 +19,15 @@ export declare class ImportsController {
         createdBy: number | null;
         auditId: number | null;
     })[]>;
+    clear(req: {
+        user?: {
+            userId?: number;
+        };
+        ip?: string;
+    }): Promise<{
+        deleted: number;
+        outputFilesRemoved: number;
+    }>;
     run(body: {
         source?: string;
     }, req: {
@@ -41,6 +50,22 @@ export declare class ImportsController {
             errorLog: string | null;
             createdBy: number | null;
         };
+        report: import("./imports.service").EtlReport;
+        pipeline: {
+            ok: boolean;
+            error?: string;
+            stages: string[];
+        };
+    }>;
+    syncReport(): Promise<{
+        updated: {
+            updated: number;
+            status: import("./imports.service").EtlStatus;
+        };
+        report: import("./imports.service").EtlReport;
     }>;
     getStatus(): import("./imports.service").EtlStatus;
+    getReport(): import("./imports.service").EtlReport;
+    getReportHtml(): string;
+    getReportCsv(): string;
 }

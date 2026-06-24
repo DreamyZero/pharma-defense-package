@@ -134,7 +134,6 @@ function writeCatalogCache(catalog: DrugResult[]) {
   try {
     sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(catalog));
   } catch {
-    /* ignore quota */
   }
 }
 
@@ -185,7 +184,6 @@ class DrugsStore {
     try {
       sessionStorage.removeItem(CATALOG_CACHE_KEY);
     } catch {
-      /* ignore */
     }
   }
 
@@ -246,7 +244,6 @@ class DrugsStore {
     this.searchQuery = q;
   }
 
-  /** Сброс поиска и полный каталог (кнопка «Показать все препараты»). */
   showAllDrugs() {
     this.searchQuery = '';
     const complete = filterCompleteCatalog(this.catalog).length;
@@ -256,7 +253,6 @@ class DrugsStore {
     try {
       sessionStorage.removeItem(CATALOG_CACHE_KEY);
     } catch {
-      /* ignore */
     }
     this.catalog = [];
     this.catalogLoaded = false;
@@ -280,7 +276,8 @@ class DrugsStore {
           }
         });
       }
-    } catch { /* keep local filter */ }
+    } catch {
+    }
     finally {
       runInAction(() => { this.catalogLoading = false; });
     }
@@ -324,7 +321,8 @@ class DrugsStore {
         });
         return;
       }
-    } catch { /* local */ }
+    } catch {
+    }
     const loc = localBySlug(slug) || localByName(slug);
     runInAction(() => {
       this.selectedDrug = loc ? localToDetail(loc) : null;
@@ -382,7 +380,7 @@ class DrugsStore {
             a: da?.name ?? a, b: db?.name ?? b,
             risk: (hit?.risk ?? 'low') as 'high' | 'medium' | 'low',
             clinicalEffect: hit?.note,
-            recommendation: hit?.note ?? 'Значимое взаимодействие не найдено',
+            recommendation: '',
           };
         }),
       );

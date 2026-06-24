@@ -26,11 +26,15 @@ services:
     working_dir: /app
     volumes:
       - ./backend-nest:/app
-    command: sh -c "rm -rf dist/src && npm install && npx nest start --watch"
+      - ./etl:/etl
+    command: sh -c "apk add --no-cache python3 py3-pip && pip3 install --break-system-packages -q pandas beautifulsoup4 requests && rm -rf dist/src && npm install && npx nest start --watch"
     ports:
       - "3001:3000"
     environment:
       DATABASE_URL: postgresql://pharma:pharma@postgres:5432/pharma?schema=public
+      ETL_DIR: /etl
+      ETL_OUTPUT_DIR: /etl/output
+      ETL_PYTHON: python3
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: password12345

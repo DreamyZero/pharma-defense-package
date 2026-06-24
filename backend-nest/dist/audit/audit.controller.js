@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuditController = void 0;
 const common_1 = require("@nestjs/common");
@@ -22,6 +25,9 @@ let AuditController = class AuditController {
     list() {
         return this.auditService.list();
     }
+    clear(req) {
+        return this.auditService.clear(req.user?.userId, req.ip);
+    }
 };
 exports.AuditController = AuditController;
 __decorate([
@@ -32,6 +38,15 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AuditController.prototype, "list", null);
+__decorate([
+    (0, roles_guard_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Очистить журнал аудита (только ADMIN)' }),
+    (0, common_1.Delete)(),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuditController.prototype, "clear", null);
 exports.AuditController = AuditController = __decorate([
     (0, swagger_1.ApiTags)('audit'),
     (0, swagger_1.ApiBearerAuth)(),

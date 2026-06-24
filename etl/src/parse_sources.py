@@ -1,12 +1,3 @@
-"""
-Парсинг источников для ETL.
-
-По умолчанию: демо XML (ГРЛС sample) + HTML-инструкции → data/raw/drugs_raw.csv.
-
-Опционально (env или аргументы):
-  FETCH_GRLS=1 / --grls     — скачать открытый CSV ГРЛС в data/raw/drugs_grls.csv
-  FETCH_RXNORM=1 / --rxnorm — обогатить interactions_rxnorm.csv (первые 50 торговых имён из ГРЛС)
-"""
 from __future__ import annotations
 
 import argparse
@@ -181,6 +172,49 @@ def rxnorm_interactions(trade_name: str) -> list[dict]:
         return []
 
 
+def merge_grls_into_rows(grls: pd.DataFrame, rows: list[dict], limit: int = 100) -> int:
+    """Добавляет уникальные препараты из CSV ГРЛС в список для drugs_raw.csv."""
+    existing = {r["trade_name"].strip().lower() for r in rows if r.get("trade_name")}
+
+    def pick_col(keys: list[str]) -> str | None:
+        lower_map = {c.strip().lower(): c for c in grls.columns}
+        for key in keys:
+            if key in grls.columns:
+                return key
+            hit = lower_map.get(key.lower())
+            if hit:
+                return hit
+        return None
+
+    name_col = pick_col(["trade_name", "Торговое наименование"]) or grls.columns[0]
+    sub_col = pick_col(["substance", "МНН", "Международное непатентованное наименование"])
+    reg_col = pick_col(["registration_number", "Регистрационный номер", "номер регистрационного удостоверения"])
+    mfr_col = pick_col(["manufacturer", "Держатель РУ", "Производитель"])
+    form_col = pick_col(["form", "Лекарственная форма"])
+
+    added = 0
+    for _, grls_row in grls.iterrows():
+        if added >= limit:
+            break
+        name = str(grls_row.get(name_col, "")).strip()
+        if not name or name.lower() in existing:
+            continue
+        row = _empty_row()
+        row["trade_name"] = name
+        if sub_col:
+            row["substance"] = str(grls_row.get(sub_col, "")).strip()
+        if reg_col:
+            row["registration_number"] = str(grls_row.get(reg_col, "")).strip()
+        if mfr_col:
+            row["manufacturer"] = str(grls_row.get(mfr_col, "")).strip()
+        if form_col:
+            row["form"] = str(grls_row.get(form_col, "")).strip()
+        rows.append(row)
+        existing.add(name.lower())
+        added += 1
+    return added
+
+
 def fetch_rxnorm_interactions(grls: pd.DataFrame, limit: int = 50) -> None:
     name_col = "trade_name" if "trade_name" in grls.columns else grls.columns[0]
     sample = grls[name_col].dropna().head(limit).tolist()
@@ -211,16 +245,21 @@ def main() -> None:
         rows = parse_demo_xml()
     merge_html_instructions(rows)
 
-    output_path = OUT / "drugs_raw.csv"
-    pd.DataFrame(rows).to_csv(output_path, index=False, encoding="utf-8")
-    print(f"parse_sources done -> {output_path} ({len(rows)} drugs)")
-
     grls_df: pd.DataFrame | None = None
     if fetch_grls:
         try:
             grls_df = fetch_grls_csv()
         except Exception as exc:
             print(f"  WARN: не удалось загрузить ГРЛС: {exc}", file=sys.stderr)
+
+    if grls_df is not None:
+        merge_limit = int(os.environ.get("GRLS_MERGE_LIMIT", "100"))
+        added = merge_grls_into_rows(grls_df, rows, merge_limit)
+        print(f"  ГРЛС: добавлено {added} препаратов в каталог (лимит {merge_limit})")
+
+    output_path = OUT / "drugs_raw.csv"
+    pd.DataFrame(rows).to_csv(output_path, index=False, encoding="utf-8")
+    print(f"parse_sources done -> {output_path} ({len(rows)} drugs)")
 
     if fetch_rxnorm:
         if grls_df is None:
@@ -232,7 +271,8 @@ def main() -> None:
                 grls_df = None
         if grls_df is not None:
             try:
-                fetch_rxnorm_interactions(grls_df)
+                rxnorm_limit = int(os.environ.get("RXNORM_LIMIT", "50"))
+                fetch_rxnorm_interactions(grls_df, limit=rxnorm_limit)
             except Exception as exc:
                 print(f"  WARN: RxNorm не загружен: {exc}", file=sys.stderr)
 

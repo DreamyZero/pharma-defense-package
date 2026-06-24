@@ -7,6 +7,7 @@ const mockPrisma = {
   auditLog: {
     findMany: jest.fn(),
     create: jest.fn(),
+    deleteMany: jest.fn(),
   },
 };
 
@@ -78,6 +79,27 @@ describe('AuditService', () => {
       expect(row.user).toBe('—');
       expect(row.entity).toBe('—');
       expect(row.ip).toBe('—');
+    });
+  });
+
+  describe('clear()', () => {
+    it('удаляет все записи и логирует действие', async () => {
+      mockPrisma.auditLog.deleteMany.mockResolvedValue({ count: 5 });
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 1 });
+
+      const result = await service.clear(1, '127.0.0.1');
+
+      expect(mockPrisma.auditLog.deleteMany).toHaveBeenCalled();
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 1,
+          action: 'AUDIT_CLEAR',
+          entityType: 'AuditLog',
+          ipAddress: '127.0.0.1',
+          newValues: { deleted: 5 },
+        }),
+      });
+      expect(result).toEqual({ deleted: 5 });
     });
   });
 

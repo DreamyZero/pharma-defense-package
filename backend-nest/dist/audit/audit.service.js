@@ -32,6 +32,17 @@ let AuditService = AuditService_1 = class AuditService {
             ip: row.ipAddress ?? '—',
         }));
     }
+    async clear(userId, ipAddress) {
+        const { count } = await this.prisma.auditLog.deleteMany();
+        await this.log({
+            userId,
+            action: 'AUDIT_CLEAR',
+            entityType: 'AuditLog',
+            ipAddress,
+            newValues: { deleted: count },
+        });
+        return { deleted: count };
+    }
     async log(data) {
         try {
             return await this.prisma.auditLog.create({ data });

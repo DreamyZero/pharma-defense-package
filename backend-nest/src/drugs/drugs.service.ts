@@ -401,13 +401,26 @@ export class DrugsService {
             const interaction = await this.prisma.drugInteraction.findFirst({
               where: { OR: [{ drugAId: a.id, drugBId: b.id }, { drugAId: b.id, drugBId: a.id }] },
             });
+            const clinicalEffect = interaction?.clinicalEffect?.trim() || null;
+            const mechanism = interaction?.mechanism?.trim() || null;
+            let recommendation = interaction?.recommendation?.trim() || '';
+            if (
+              recommendation &&
+              clinicalEffect &&
+              recommendation.toLowerCase() === clinicalEffect.toLowerCase()
+            ) {
+              recommendation = '';
+            }
+            if (!clinicalEffect && !mechanism && !recommendation) {
+              recommendation = 'Значимое взаимодействие не найдено';
+            }
             results.push({
               a: a.name,
               b: b.name,
               risk: interaction?.severity?.toLowerCase() ?? 'low',
-              mechanism: interaction?.mechanism ?? null,
-              clinicalEffect: interaction?.clinicalEffect ?? null,
-              recommendation: interaction?.recommendation ?? 'Значимое взаимодействие не найдено',
+              mechanism,
+              clinicalEffect,
+              recommendation,
             });
           }
         }
@@ -443,7 +456,7 @@ export class DrugsService {
           risk: hit?.risk ?? 'low',
           mechanism: null as string | null,
           clinicalEffect: hit?.note ?? null,
-          recommendation: hit?.note ?? 'Значимое взаимодействие не найдено в базе',
+          recommendation: '',
         };
       }),
     );

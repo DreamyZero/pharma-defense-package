@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>PharmaBase — отчёт тестового ETL</title>
+  <title>PharmaBase — отчёт ETL</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f172a; color: #e2e8f0; }
     h1 { color: #38bdf8; }
@@ -12,86 +12,15 @@
     .metric b { font-size: 1.5rem; display: block; color: #38bdf8; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
     .drug { background: #1e293b; padding: 1rem; border-radius: 10px; border-left: 4px solid #38bdf8; }
-    pre { background: #1e293b; padding: 1rem; border-radius: 8px; overflow: auto; font-size: 12px; }
   </style>
 </head>
 <body>
-  <h1>Тестовый ETL PharmaBase</h1>
-  <p>Сформировано: 2026-06-03 21:06 UTC</p>
+  <h1>Отчёт ETL PharmaBase</h1>
+  <p>Завершён: 2026-06-23T01:27:40.238938+00:00</p>
+  <p>Источник: data/raw/drugs_raw.csv</p>
   <div class="status">Статус пайплайна: <strong>ok</strong></div>
-  <div class="metrics">
-    <div class="metric"><b>40</b>drugs</div><div class="metric"><b>68</b>indications</div><div class="metric"><b>78</b>contraindications</div><div class="metric"><b>95</b>side_effects</div><div class="metric"><b>61</b>analogs</div><div class="metric"><b>40</b>interactions</div><div class="metric"><b>66</b>synonyms</div>
-  </div>
+  <div class="metrics"><div class="metric"><b>40</b>Препараты</div><div class="metric"><b>68</b>Показания</div><div class="metric"><b>78</b>Противопоказания</div><div class="metric"><b>95</b>Побочные эффекты</div><div class="metric"><b>61</b>Аналоги</div><div class="metric"><b>40</b>Взаимодействия</div><div class="metric"><b>66</b>Синонимы</div></div>
   <h2>Примеры из каталога</h2>
-  <div class="grid">
-        <article class="drug">
-          <h3>Аспирин</h3>
-          <p><b>МНН:</b> Ацетилсалициловая кислота</p>
-          <p><b>АТХ:</b> N02BA01 · <b>Группа:</b> НПВС</p>
-          <p><b>Дозировка:</b> 75–500 мг 1–3 раза в сутки после еды; кардиопрофилактика — 75–100 мг 1 раз в сутки</p>
-          <p><b>Показания:</b> боль;жар;тромбоз</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Метформин</h3>
-          <p><b>МНН:</b> Метформина гидрохлорид</p>
-          <p><b>АТХ:</b> A10BA02 · <b>Группа:</b> Гипогликемические</p>
-          <p><b>Дозировка:</b> 500–1000 мг 2–3 раза в сутки с едой, суточная доза до 3000 мг</p>
-          <p><b>Показания:</b> диабет 2 типа;гипергликемия</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Амоксициллин</h3>
-          <p><b>МНН:</b> Амоксициллин</p>
-          <p><b>АТХ:</b> J01CA04 · <b>Группа:</b> Антибиотики</p>
-          <p><b>Дозировка:</b> 500 мг 3 раза в сутки или 875 мг 2 раза в сутки 5–7 дней</p>
-          <p><b>Показания:</b> инфекции;ангина;синусит</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Омепразол</h3>
-          <p><b>МНН:</b> Омепразол</p>
-          <p><b>АТХ:</b> A02BC01 · <b>Группа:</b> ИПП</p>
-          <p><b>Дозировка:</b> 20–40 мг 1 раз в сутки утром натощак</p>
-          <p><b>Показания:</b> ГЭРБ;язва</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Лизиноприл</h3>
-          <p><b>МНН:</b> Лизиноприл</p>
-          <p><b>АТХ:</b> C09AA03 · <b>Группа:</b> Ингибиторы АПФ</p>
-          <p><b>Дозировка:</b> 5–40 мг 1 раз в сутки в одно и то же время</p>
-          <p><b>Показания:</b> гипертензия;ХСН</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Аторвастатин</h3>
-          <p><b>МНН:</b> Аторвастатин</p>
-          <p><b>АТХ:</b> C10AA05 · <b>Группа:</b> Статины</p>
-          <p><b>Дозировка:</b> 10–80 мг 1 раз в сутки вечером</p>
-          <p><b>Показания:</b> гиперхолестеринемия</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Варфарин</h3>
-          <p><b>МНН:</b> Варфарин</p>
-          <p><b>АТХ:</b> B01AA03 · <b>Группа:</b> Антикоагулянты</p>
-          <p><b>Дозировка:</b> индивидуально под контролем МНО (обычно 2,5–5 мг/сутки)</p>
-          <p><b>Показания:</b> тромбоз;фибрилляция</p>
-        </article>
-        
-        <article class="drug">
-          <h3>Сертралин</h3>
-          <p><b>МНН:</b> Сертралин</p>
-          <p><b>АТХ:</b> N06AB06 · <b>Группа:</b> СИОЗС</p>
-          <p><b>Дозировка:</b> 50–200 мг 1 раз в сутки утром или вечером</p>
-          <p><b>Показания:</b> депрессия;ОКР</p>
-        </article>
-        </div>
-  <h2>Лог parse_sources</h2>
-  <pre>parse_sources done -> C:\Users\BoGuU\Desktop\pharma-defense-package\etl\data\raw\drugs_raw.csv (40 drugs)</pre>
-  <h2>Лог run_etl</h2>
-  <pre>ETL done
-{"drugs": 40, "indications": 68, "contraindications": 78, "side_effects": 95, "analogs": 61, "interactions": 40, "synonyms": 66}</pre>
+  <div class="grid"><article class="drug"><h3>Аспирин</h3><p><b>МНН:</b> Ацетилсалициловая кислота</p><p><b>АТХ:</b> N02BA01 · <b>Группа:</b> НПВС</p><p><b>Дозировка:</b> 75–500 мг 1–3 раза в сутки после еды; кардиопрофилактика — 75–100 мг 1 раз в сутки</p><p><b>Показания:</b> боль;жар;тромбоз</p></article><article class="drug"><h3>Метформин</h3><p><b>МНН:</b> Метформина гидрохлорид</p><p><b>АТХ:</b> A10BA02 · <b>Группа:</b> Гипогликемические</p><p><b>Дозировка:</b> 500–1000 мг 2–3 раза в сутки с едой, суточная доза до 3000 мг</p><p><b>Показания:</b> диабет 2 типа;гипергликемия</p></article><article class="drug"><h3>Амоксициллин</h3><p><b>МНН:</b> Амоксициллин</p><p><b>АТХ:</b> J01CA04 · <b>Группа:</b> Антибиотики</p><p><b>Дозировка:</b> 500 мг 3 раза в сутки или 875 мг 2 раза в сутки 5–7 дней</p><p><b>Показания:</b> инфекции;ангина;синусит</p></article><article class="drug"><h3>Омепразол</h3><p><b>МНН:</b> Омепразол</p><p><b>АТХ:</b> A02BC01 · <b>Группа:</b> ИПП</p><p><b>Дозировка:</b> 20–40 мг 1 раз в сутки утром натощак</p><p><b>Показания:</b> ГЭРБ;язва</p></article><article class="drug"><h3>Лизиноприл</h3><p><b>МНН:</b> Лизиноприл</p><p><b>АТХ:</b> C09AA03 · <b>Группа:</b> Ингибиторы АПФ</p><p><b>Дозировка:</b> 5–40 мг 1 раз в сутки в одно и то же время</p><p><b>Показания:</b> гипертензия;ХСН</p></article><article class="drug"><h3>Аторвастатин</h3><p><b>МНН:</b> Аторвастатин</p><p><b>АТХ:</b> C10AA05 · <b>Группа:</b> Статины</p><p><b>Дозировка:</b> 10–80 мг 1 раз в сутки вечером</p><p><b>Показания:</b> гиперхолестеринемия</p></article><article class="drug"><h3>Варфарин</h3><p><b>МНН:</b> Варфарин</p><p><b>АТХ:</b> B01AA03 · <b>Группа:</b> Антикоагулянты</p><p><b>Дозировка:</b> индивидуально под контролем МНО (обычно 2,5–5 мг/сутки)</p><p><b>Показания:</b> тромбоз;фибрилляция</p></article><article class="drug"><h3>Сертралин</h3><p><b>МНН:</b> Сертралин</p><p><b>АТХ:</b> N06AB06 · <b>Группа:</b> СИОЗС</p><p><b>Дозировка:</b> 50–200 мг 1 раз в сутки утром или вечером</p><p><b>Показания:</b> депрессия;ОКР</p></article></div>
 </body>
 </html>

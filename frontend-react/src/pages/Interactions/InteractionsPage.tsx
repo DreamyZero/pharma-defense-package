@@ -6,6 +6,34 @@ const SEVERITY_CLASS: Record<string, string> = {
   high: 'badge--danger', medium: 'badge--warning', moderate: 'badge--warning', low: 'badge--success',
 };
 
+const RISK_LABEL: Record<string, string> = {
+  high: 'Высокий',
+  medium: 'Средний',
+  moderate: 'Средний',
+  low: 'Низкий',
+};
+
+function uniqueInteractionLines(item: {
+  mechanism?: string | null;
+  clinicalEffect?: string | null;
+  recommendation?: string | null;
+}): string[] {
+  const seen = new Set<string>();
+  const lines: string[] = [];
+
+  for (const part of [item.mechanism, item.clinicalEffect, item.recommendation]) {
+    const text = part?.trim();
+    if (!text) continue;
+    if (/^значимое взаимодействие не найдено/i.test(text)) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    lines.push(text);
+  }
+
+  return lines;
+}
+
 export const InteractionsPage = observer(() => {
   const [input, setInput] = useState('');
   const [list, setList] = useState<string[]>([]);
@@ -48,17 +76,39 @@ export const InteractionsPage = observer(() => {
       )}
       {drugsStore.interactions.length > 0 && (
         <div className="interactions-results">
-          {drugsStore.interactions.map((item, i) => (
-            <div key={i} className={`interaction-card interaction-card--${item.risk}`}>
-              <div className="interaction-card__header">
-                <strong>{item.a}</strong> + <strong>{item.b}</strong>
-                <span className={`badge ${SEVERITY_CLASS[item.risk] || ''}`}>{item.risk.toUpperCase()}</span>
+          {drugsStore.interactions.map((item, i) => {
+            const details = uniqueInteractionLines(item);
+            return (
+              <div key={i} className={`interaction-card interaction-card--${item.risk}`}>
+                <div className="interaction-card__header">
+                  <span className="interaction-card__pair">
+                    <strong>{item.a}</strong>
+                    <span className="interaction-card__plus">+</span>
+                    <strong>{item.b}</strong>
+                  </span>
+                  <span className={`badge ${SEVERITY_CLASS[item.risk] || ''}`}>
+                    {RISK_LABEL[item.risk] ?? item.risk}
+                  </span>
+                </div>
+                {details.length > 0 ? (
+                  <div className="interaction-card__content">
+                    {details.map((line, idx) => (
+                      <p
+                        key={idx}
+                        className={idx === 0 ? 'interaction-card__body' : 'interaction-card__rec'}
+                      >
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="interaction-card__body interaction-card__body--muted">
+                    Значимое взаимодействие не найдено
+                  </p>
+                )}
               </div>
-              {item.mechanism && <p className="interaction-card__text text-muted">{item.mechanism}</p>}
-              {item.clinicalEffect && <p className="interaction-card__text">{item.clinicalEffect}</p>}
-              <p className="interaction-card__rec interaction-card__text">{item.recommendation}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

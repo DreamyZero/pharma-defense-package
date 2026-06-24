@@ -32,7 +32,6 @@ export function normalizeDrugFromApi(raw: Record<string, unknown>): DrugResult {
   };
 }
 
-/** Полная карточка каталога (без заглушек и пустых полей). */
 export function isCompleteCatalogDrug(drug: DrugResult): boolean {
   if (!drug.registrationNumber?.trim()) return false;
   if (!drug.manufacturer?.trim()) return false;
@@ -56,7 +55,6 @@ export function filterCompleteCatalog(drugs: DrugResult[]): DrugResult[] {
   return drugs.filter(isCompleteCatalogDrug);
 }
 
-/** API + локальный каталог: приоритет у записей с сервера. */
 export function mergeCatalog(apiDrugs: DrugResult[], bundled: DrugResult[]): DrugResult[] {
   const complete = filterCompleteCatalog(apiDrugs);
   if (complete.length >= bundled.length - 2) {

@@ -1,8 +1,22 @@
 import { useEffect, useState } from 'react';
-import { fetchImports, runImport, type ImportJob } from '../../entities/imports/api';
-import { fetchAudit, type AuditRow } from '../../entities/audit/api';
+import { useNavigate } from 'react-router-dom';
+import {
+  fetchImports,
+  fetchEtlReport,
+  runImport,
+  clearImports,
+  syncEtlReport,
+  saveEtlReportCsv,
+  downloadEtlReportHtml,
+  type ImportJob,
+  type EtlReport,
+} from '../../entities/imports/api';
+import { fetchAudit, clearAudit, type AuditRow } from '../../entities/audit/api';
 import { fetchAdminUsers, setUserRole, updateAdminUser, type AdminUser } from '../../entities/admin/api';
 import { api } from '../../shared/api';
+import { uiStore } from '../../stores/ui.store';
+import { Icon } from '../../components/Icon';
+import { EtlReportModal } from './EtlReportModal';
 
 type Metric = { label: string; value: string | number; note: string };
 type RecentQuery = { name: string; subtitle: string; time: string };
@@ -24,7 +38,22 @@ function statusBadgeClass(status: string) {
   return 'admin-badge admin-badge--pending';
 }
 
+function formatImportTime(iso: string) {
+  try {
+    return new Date(iso).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export function AdminPage() {
+  const navigate = useNavigate();
   const [imports, setImports] = useState<ImportJob[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -37,6 +66,14 @@ export function AdminPage() {
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const [statsError, setStatsError] = useState(false);
   const [auditError, setAuditError] = useState(false);
+  const [auditClearing, setAuditClearing] = useState(false);
+  const [etlReport, setEtlReport] = useState<EtlReport | null>(null);
+  const [etlReportOpen, setEtlReportOpen] = useState(false);
+  const [etlHtmlPreview, setEtlHtmlPreview] = useState<string | null>(null);
+  const [etlActionLoading, setEtlActionLoading] = useState(false);
+  const [etlRunning, setEtlRunning] = useState(false);
+  const [importsClearing, setImportsClearing] = useState(false);
+  const [etlError, setEtlError] = useState('');
 
   const loadAudit = async () => {
     try {
@@ -51,13 +88,30 @@ export function AdminPage() {
     }
   };
 
+  const handleClearAudit = async () => {
+    if (!audit.length) return;
+    if (!window.confirm('Удалить все записи журнала аудита? Это действие необратимо.')) return;
+
+    setAuditClearing(true);
+    try {
+      const { deleted } = await clearAudit();
+      await loadAudit();
+      setMessage(`Журнал аудита очищен (удалено ${deleted} записей).`);
+    } catch {
+      setMessage('Не удалось очистить журнал аудита.');
+    } finally {
+      setAuditClearing(false);
+    }
+  };
+
   useEffect(() => {
     Promise.allSettled([
       fetchImports(),
       fetchAudit(),
       fetchAdminUsers(),
       api.get('/dashboard').then(r => r.data),
-    ]).then(([importsResult, auditResult, usersResult, dashboardResult]) => {
+      fetchEtlReport(),
+    ]).then(([importsResult, auditResult, usersResult, dashboardResult, etlResult]) => {
       if (importsResult.status === 'fulfilled') setImports(importsResult.value);
       if (usersResult.status === 'fulfilled') setUsers(usersResult.value);
       else setUsers([]);
@@ -78,15 +132,149 @@ export function AdminPage() {
         setStatsError(true);
       }
 
+      if (etlResult.status === 'fulfilled' && etlResult.value) {
+        setEtlReport(etlResult.value);
+      }
+
       setLoading(false);
     });
   }, []);
 
+  const refreshImports = async () => {
+    const list = await fetchImports();
+    setImports(list);
+  };
+
+  const handleSyncReport = async () => {
+    setEtlActionLoading(true);
+    setEtlError('');
+    try {
+      const report = await syncEtlReport();
+      if (!report) {
+        setEtlError('Не удалось синхронизировать отчёт. Проверьте backend и путь etl/output');
+        return;
+      }
+      setEtlReport(report);
+      await refreshImports();
+      if (report.status.status === 'ok') {
+        setMessage('Отчёт ETL обновлён');
+      } else if (report.status.status === 'never_run') {
+        setEtlError(report.status.error ?? 'Сначала выполните: cd etl/src && python run_etl.py');
+      }
+    } catch {
+      setEtlError('Синхронизация не удалась');
+    } finally {
+      setEtlActionLoading(false);
+    }
+  };
+
+  const refreshEtlReport = async () => {
+    const report = await fetchEtlReport();
+    if (report) setEtlReport(report);
+    return report;
+  };
+
+  const handleShowReport = async () => {
+    setEtlActionLoading(true);
+    setEtlError('');
+    try {
+      const report = await refreshEtlReport();
+      if (!report) {
+        setEtlError('Не удалось загрузить отчёт');
+        return;
+      }
+      let html: string | null = null;
+      if (report.files.html) {
+        html = await downloadEtlReportHtml();
+      }
+      setEtlHtmlPreview(html);
+      setEtlReportOpen(true);
+    } catch {
+      setEtlError('Отчёт не найден. Запустите ETL или обновите отчёт.');
+    } finally {
+      setEtlActionLoading(false);
+    }
+  };
+
+  const handleOpenHtml = async () => {
+    setEtlActionLoading(true);
+    setEtlError('');
+    try {
+      const report = await refreshEtlReport();
+      if (!report) {
+        setEtlError('Не удалось загрузить отчёт');
+        return;
+      }
+      const html = await downloadEtlReportHtml();
+      setEtlHtmlPreview(html);
+      setEtlReport(report);
+      setEtlReportOpen(true);
+    } catch {
+      setEtlError('HTML-отчёт недоступен. Запустите ETL или обновите отчёт.');
+    } finally {
+      setEtlActionLoading(false);
+    }
+  };
+
+  const handleDownloadCsv = async () => {
+    setEtlActionLoading(true);
+    setEtlError('');
+    try {
+      await saveEtlReportCsv();
+    } catch {
+      setEtlError('CSV-отчёт недоступен');
+    } finally {
+      setEtlActionLoading(false);
+    }
+  };
+
   const handleRun = async () => {
-    const res = await runImport(source);
-    setMessage(res.message);
-    setImports(prev => [res.job, ...prev]);
-    await loadAudit();
+    setEtlRunning(true);
+    setEtlError('');
+    try {
+      const res = await runImport(source);
+      setMessage(res.message);
+      setImports(prev => [res.job, ...prev.filter(j => j.id !== res.job.id)]);
+      if (res.report) setEtlReport(res.report);
+      await loadAudit();
+    } catch {
+      setEtlError('Не удалось запустить ETL. Проверьте Python (pandas) и доступность backend.');
+    } finally {
+      setEtlRunning(false);
+    }
+  };
+
+  const handleClearImports = async () => {
+    if (
+      !window.confirm(
+        'Удалить журнал импортов и файлы отчёта ETL (status, CSV, HTML)? Это действие необратимо.',
+      )
+    ) {
+      return;
+    }
+
+    setImportsClearing(true);
+    setEtlError('');
+    try {
+      const { deleted, outputFilesRemoved } = await clearImports();
+      setImports([]);
+      setEtlReport({
+        status: { status: 'never_run' },
+        metrics: [],
+        files: { html: false, csv: false },
+        outputDir: etlReport?.outputDir ?? '',
+      });
+      setEtlReportOpen(false);
+      setEtlHtmlPreview(null);
+      setMessage(
+        `Очищено: ${deleted} записей журнала, ${outputFilesRemoved} файлов отчёта.`,
+      );
+      await loadAudit();
+    } catch {
+      setEtlError('Не удалось очистить журнал импортов и отчёты ETL.');
+    } finally {
+      setImportsClearing(false);
+    }
   };
 
   const handleRoleChange = async (userId: number, role: AdminUser['role']) => {
@@ -141,6 +329,24 @@ export function AdminPage() {
 
   return (
     <div className="admin-page">
+      <header className="admin-page-header">
+        <div>
+          <h1 className="page-title">Панель администратора</h1>
+          <p className="text-muted text-sm">ETL, пользователи, аудит и превью мобильного интерфейса</p>
+        </div>
+        <button
+          type="button"
+          className="admin-btn admin-btn--mobile"
+          onClick={() => {
+            uiStore.enableMobilePreview();
+            navigate('/search');
+          }}
+        >
+          <Icon name="layers" size={16} />
+          Мобильная версия
+        </button>
+      </header>
+
       <section className="admin-metrics">
         {metrics.map(({ label, value, note }) => (
           <div key={label} className="admin-panel">
@@ -219,31 +425,112 @@ export function AdminPage() {
       </section>
 
       <section className="admin-cols">
-        <div className="admin-panel">
+        <div className="admin-panel admin-panel--etl">
           <div className="admin-panel__head">
             <h2>ETL-импорт</h2>
-            <span className="admin-panel__hint">Состояние источников</span>
+            <span className="admin-panel__hint">Пайплайн и отчёты</span>
           </div>
+
+          <div className="admin-etl-hero">
+            <div className="admin-etl-hero__main">
+              <span className={`admin-etl-pill admin-etl-pill--${etlReport?.status.status ?? 'never_run'}`}>
+                {etlReport?.status.status === 'ok'
+                  ? 'Последний ETL: успешно'
+                  : etlReport?.status.status === 'failed'
+                    ? 'Последний ETL: ошибка'
+                    : 'ETL ещё не запускался'}
+              </span>
+              {etlReport?.status.source_file && (
+                <p className="admin-etl-hero__source">Источник: {etlReport.status.source_file}</p>
+              )}
+              {etlReport?.finishedAt && (
+                <p className="admin-etl-hero__time">
+                  Завершён: {new Date(etlReport.finishedAt).toLocaleString('ru-RU')}
+                </p>
+              )}
+            </div>
+            <div className="admin-etl-actions">
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost"
+                disabled={etlActionLoading}
+                onClick={handleSyncReport}
+              >
+                Обновить отчёт
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--report"
+                disabled={etlActionLoading}
+                onClick={handleShowReport}
+              >
+                Показать отчёт
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost"
+                disabled={etlActionLoading || !etlReport?.files.html}
+                onClick={handleOpenHtml}
+              >
+                HTML
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost"
+                disabled={etlActionLoading || !etlReport?.files.csv}
+                onClick={handleDownloadCsv}
+              >
+                CSV
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--danger"
+                disabled={importsClearing || etlActionLoading || etlRunning}
+                onClick={handleClearImports}
+              >
+                {importsClearing ? 'Очистка…' : 'Очистить'}
+              </button>
+            </div>
+          </div>
+
+          {etlReport && etlReport.metrics.length > 0 && (
+            <div className="admin-etl-metrics admin-etl-metrics--inline">
+              {etlReport.metrics.map((m, i) => (
+                <div key={m.key} className="admin-etl-metrics__item" data-accent={i % 4}>
+                  <span className="admin-etl-metrics__value">{m.value.toLocaleString('ru')}</span>
+                  <span className="admin-etl-metrics__label">{m.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <p className="admin-etl-hint">
-            Кнопка создаёт запись импорта в БД. Полный пайплайн:{' '}
-            <code>python etl/test_etl_demo.py</code>
-            {' '}→ затем <code>npx prisma db seed</code>.
-            Отчёт: <code>etl/output/demo_report.html</code>
+            Кнопка <strong>Запуск ETL</strong> выполняет полный пайплайн:
+            <code>parse_sources.py --grls --rxnorm</code> → <code>run_etl.py</code> → PostgreSQL → Neo4j.
+            Нужны Python (pandas, requests) и доступ к minzdrav.gov.ru и rxnav.nlm.nih.gov.
           </p>
+
           <div className="admin-etl-form">
             <input
               className="admin-input"
               value={source}
               onChange={e => setSource(e.target.value)}
               placeholder="Имя источника"
+              disabled={etlRunning}
             />
-            <button type="button" className="admin-btn admin-btn--primary" onClick={handleRun}>
-              Запуск ETL
+            <button
+              type="button"
+              className="admin-btn admin-btn--primary"
+              disabled={etlRunning}
+              onClick={handleRun}
+            >
+              {etlRunning ? 'Выполняется…' : 'Запуск ETL'}
             </button>
           </div>
           {message && <div className="admin-msg admin-msg--ok">{message}</div>}
+          {etlError && <div className="admin-msg admin-msg--err">{etlError}</div>}
           <div className="admin-table-wrap">
-            <table className="admin-table">
+            <table className="admin-table admin-table--imports">
               <thead>
                 <tr>
                   {['ID', 'Источник', 'Статус', 'Обработано', 'Ошибок', 'Время'].map(h => (
@@ -261,7 +548,7 @@ export function AdminPage() {
                     </td>
                     <td>{row.recordsProcessed}</td>
                     <td>{row.recordsFailed}</td>
-                    <td>{row.startedAt}</td>
+                    <td>{formatImportTime(row.startedAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -286,12 +573,31 @@ export function AdminPage() {
         </div>
       </section>
 
+      {etlReportOpen && etlReport && (
+        <EtlReportModal
+          report={etlReport}
+          htmlPreview={etlHtmlPreview}
+          onClose={() => {
+            setEtlReportOpen(false);
+            setEtlHtmlPreview(null);
+          }}
+        />
+      )}
+
       <section className="admin-panel">
         <div className="admin-panel__head">
           <h2>Журнал аудита</h2>
           <div className="admin-head-actions">
             <button type="button" className="admin-btn admin-btn--ghost" onClick={() => loadAudit()}>
               Обновить
+            </button>
+            <button
+              type="button"
+              className="admin-btn admin-btn--danger admin-btn--on-dark"
+              disabled={auditClearing || loading}
+              onClick={handleClearAudit}
+            >
+              {auditClearing ? 'Очистка…' : 'Очистить'}
             </button>
             <span className="admin-panel__hint">Только для администратора</span>
           </div>

@@ -19,6 +19,7 @@ exports.GraphModule = GraphModule = __decorate([
         imports: [neo4j_module_1.Neo4jModule],
         controllers: [graph_controller_1.GraphController],
         providers: [graph_service_1.GraphService],
+        exports: [graph_service_1.GraphService],
     })
 ], GraphModule);
 //# sourceMappingURL=graph.module.js.map

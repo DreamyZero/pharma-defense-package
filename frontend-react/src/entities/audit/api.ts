@@ -34,3 +34,8 @@ export async function fetchAudit(): Promise<AuditRow[]> {
   if (!Array.isArray(data)) return [];
   return data.map(row => mapRow(row as Record<string, unknown>));
 }
+
+export async function clearAudit(): Promise<{ deleted: number }> {
+  const { data } = await api.delete('/audit');
+  return { deleted: Number(data?.deleted ?? 0) };
+}

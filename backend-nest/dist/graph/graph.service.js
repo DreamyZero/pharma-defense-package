@@ -35,14 +35,48 @@ let GraphService = GraphService_1 = class GraphService {
             await session.close();
         }
     }
-    async getFullGraph(limit = 60) {
+    async resolveDrugId(idOrSlug) {
+        const term = idOrSlug.trim();
+        if (/^\d+$/.test(term))
+            return term;
+        const drug = await this.prisma.drug.findFirst({
+            where: {
+                OR: [
+                    { slug: { equals: term, mode: 'insensitive' } },
+                    { name: { equals: term, mode: 'insensitive' } },
+                    { name: { contains: term, mode: 'insensitive' } },
+                ],
+            },
+            orderBy: { id: 'asc' },
+        });
+        return drug ? String(drug.id) : null;
+    }
+    async resolveDrugNames(drugNames) {
+        const terms = drugNames.map((n) => n.toLowerCase().trim()).filter(Boolean);
+        if (terms.length === 0)
+            return [];
+        const pgDrugs = await this.prisma.drug.findMany({
+            where: {
+                OR: terms.flatMap((term) => [
+                    { name: { contains: term, mode: 'insensitive' } },
+                    { slug: { contains: term, mode: 'insensitive' } },
+                ]),
+            },
+            select: { name: true },
+        });
+        return [...new Set([...pgDrugs.map((d) => d.name.toLowerCase()), ...terms])];
+    }
+    async getFullGraph(limit = 30) {
         try {
             const cypher = `
-        MATCH (d:Drug)-[r1:CONTAINS]->(s:Substance)
-        OPTIONAL MATCH (d)-[r2:INTERACTS_WITH]->(d2:Drug)
-        OPTIONAL MATCH (d)-[r3:BELONGS_TO]->(g:PharmacologicalGroup)
-        RETURN d, s, r1, d2, r2, g, r3
-        LIMIT $limit
+        MATCH (d:Drug)
+        WITH d ORDER BY d.id LIMIT $limit
+        OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
+        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]-(d2:Drug)
+        OPTIONAL MATCH (d)-[:BELONGS_TO]->(g:PharmacologicalGroup)
+        OPTIONAL MATCH (d)-[ao:ANALOG_OF]->(da:Drug)
+        OPTIONAL MATCH (s)-[:HAS_SYNONYM]->(syn:Synonym)
+        RETURN d, s, d2, iw, g, da, ao, syn
       `;
             const records = await this.run(cypher, { limit: neo4j_driver_1.default.int(limit) });
             return this.mapToGraph(records);
@@ -52,16 +86,21 @@ let GraphService = GraphService_1 = class GraphService {
             return EMPTY_GRAPH;
         }
     }
-    async getDrugGraph(drugId) {
+    async getDrugGraph(idOrSlug) {
+        const drugId = await this.resolveDrugId(idOrSlug);
+        if (!drugId)
+            return EMPTY_GRAPH;
         try {
             const cypher = `
         MATCH (d:Drug {id: $drugId})
         OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
-        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]->(d2:Drug)
+        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]-(d2:Drug)
         OPTIONAL MATCH (d)-[:BELONGS_TO]->(g:PharmacologicalGroup)
         OPTIONAL MATCH (d)-[:HAS_INDICATION]->(ind:Indication)
         OPTIONAL MATCH (d)-[:HAS_CONTRAINDICATION]->(cont:Contraindication)
-        RETURN d, s, d2, iw, g, ind, cont
+        OPTIONAL MATCH (d)-[ao:ANALOG_OF]->(da:Drug)
+        OPTIONAL MATCH (s)-[:HAS_SYNONYM]->(syn:Synonym)
+        RETURN d, s, d2, iw, g, ind, cont, da, ao, syn
       `;
             const records = await this.run(cypher, { drugId });
             return this.mapToGraph(records, drugId);
@@ -73,15 +112,18 @@ let GraphService = GraphService_1 = class GraphService {
     }
     async getInteractionGraph(drugNames) {
         try {
+            const names = await this.resolveDrugNames(drugNames);
+            if (names.length === 0)
+                return EMPTY_GRAPH;
             const cypher = `
         MATCH (d:Drug)
         WHERE toLower(d.name) IN $names
-        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]->(d2:Drug)
+        OPTIONAL MATCH (d)-[iw:INTERACTS_WITH]-(d2:Drug)
         OPTIONAL MATCH (d)-[:CONTAINS]->(s:Substance)
-        RETURN d, d2, iw, s
+        OPTIONAL MATCH (d)-[ao:ANALOG_OF]->(da:Drug)
+        RETURN d, d2, iw, s, da, ao
       `;
-            const normalized = drugNames.map((n) => n.toLowerCase().trim());
-            const records = await this.run(cypher, { names: normalized });
+            const records = await this.run(cypher, { names });
             return this.mapToGraph(records);
         }
         catch (err) {
@@ -92,30 +134,36 @@ let GraphService = GraphService_1 = class GraphService {
     async syncFromPostgres() {
         const drugs = await this.prisma.drug.findMany({
             include: {
-                substances: { include: { substance: true } },
+                substances: { include: { substance: { include: { synonymLinks: true } } } },
                 indications: true,
                 interactionA: { include: { drugB: true } },
+                interactionB: { include: { drugA: true } },
+                analogsFrom: { include: { targetDrug: true } },
                 contraindications: true,
             },
         });
         const session = this.driver.session();
         let nodeCount = 0;
         let edgeCount = 0;
+        const drugIds = drugs.map((d) => String(d.id));
         try {
-            await session.run('MATCH (n) DETACH DELETE n');
+            await session.run(`MATCH (d:Drug) WHERE NOT d.id IN $ids DETACH DELETE d`, { ids: drugIds });
             for (const drug of drugs) {
-                await session.run(`MERGE (d:Drug {id: $id}) SET d.name = $name, d.atcCode = $atcCode, d.dosageForm = $dosageForm`, {
-                    id: String(drug.id),
+                const drugId = String(drug.id);
+                await session.run(`MATCH (d:Drug {id: $id})-[r:CONTAINS|BELONGS_TO|HAS_INDICATION|HAS_CONTRAINDICATION|INTERACTS_WITH|ANALOG_OF]-() DELETE r`, { id: drugId });
+                await session.run(`MERGE (d:Drug {id: $id}) SET d.name = $name, d.atcCode = $atcCode, d.dosageForm = $dosageForm, d.slug = $slug`, {
+                    id: drugId,
                     name: drug.name,
                     atcCode: drug.atcCode ?? '',
                     dosageForm: drug.dosageForm ?? '',
+                    slug: drug.slug ?? '',
                 });
                 nodeCount++;
                 if (drug.pharmacologicalGroup) {
                     const groupId = `group_${drug.pharmacologicalGroup.replace(/\s+/g, '_').toLowerCase()}`;
                     await session.run(`MERGE (g:PharmacologicalGroup {id: $id}) SET g.name = $name`, { id: groupId, name: drug.pharmacologicalGroup });
                     await session.run(`MATCH (d:Drug {id: $drugId}), (g:PharmacologicalGroup {id: $groupId})
-             MERGE (d)-[:BELONGS_TO]->(g)`, { drugId: String(drug.id), groupId });
+             MERGE (d)-[:BELONGS_TO]->(g)`, { drugId, groupId });
                     nodeCount++;
                     edgeCount++;
                 }
@@ -123,24 +171,52 @@ let GraphService = GraphService_1 = class GraphService {
                     const indId = `ind_${ind.id}`;
                     await session.run(`MERGE (i:Indication {id: $id}) SET i.name = $name`, { id: indId, name: ind.name });
                     await session.run(`MATCH (d:Drug {id: $drugId}), (i:Indication {id: $indId})
-             MERGE (d)-[:HAS_INDICATION]->(i)`, { drugId: String(drug.id), indId });
+             MERGE (d)-[:HAS_INDICATION]->(i)`, { drugId, indId });
                     nodeCount++;
                     edgeCount++;
                 }
                 for (const ds of drug.substances) {
                     await session.run(`MERGE (s:Substance {id: $id}) SET s.name = $name`, { id: String(ds.substance.id), name: ds.substance.name });
                     await session.run(`MATCH (d:Drug {id: $drugId}), (s:Substance {id: $subId})
-             MERGE (d)-[:CONTAINS {isPrimary: $isPrimary}]->(s)`, { drugId: String(drug.id), subId: String(ds.substance.id), isPrimary: ds.isPrimary });
+             MERGE (d)-[:CONTAINS {isPrimary: $isPrimary}]->(s)`, { drugId, subId: String(ds.substance.id), isPrimary: ds.isPrimary });
                     nodeCount++;
                     edgeCount++;
+                    for (const link of ds.substance.synonymLinks) {
+                        const synId = `syn_${link.id}`;
+                        await session.run(`MERGE (syn:Synonym {id: $id}) SET syn.name = $name`, { id: synId, name: link.synonym });
+                        await session.run(`MATCH (s:Substance {id: $subId}), (syn:Synonym {id: $synId})
+               MERGE (s)-[:HAS_SYNONYM]->(syn)`, { subId: String(ds.substance.id), synId });
+                        nodeCount++;
+                        edgeCount++;
+                    }
                 }
                 for (const interaction of drug.interactionA) {
                     await session.run(`MATCH (a:Drug {id: $src}), (b:Drug {id: $tgt})
              MERGE (a)-[:INTERACTS_WITH {severity: $severity, mechanism: $mechanism}]->(b)`, {
-                        src: String(drug.id),
+                        src: drugId,
                         tgt: String(interaction.drugBId),
                         severity: interaction.severity,
                         mechanism: interaction.mechanism ?? '',
+                    });
+                    edgeCount++;
+                }
+                for (const interaction of drug.interactionB) {
+                    await session.run(`MATCH (a:Drug {id: $src}), (b:Drug {id: $tgt})
+             MERGE (a)-[:INTERACTS_WITH {severity: $severity, mechanism: $mechanism}]->(b)`, {
+                        src: String(interaction.drugAId),
+                        tgt: drugId,
+                        severity: interaction.severity,
+                        mechanism: interaction.mechanism ?? '',
+                    });
+                    edgeCount++;
+                }
+                for (const analog of drug.analogsFrom) {
+                    await session.run(`MATCH (a:Drug {id: $src}), (b:Drug {id: $tgt})
+             MERGE (a)-[:ANALOG_OF {reason: $reason, confidence: $confidence}]->(b)`, {
+                        src: drugId,
+                        tgt: String(analog.targetDrugId),
+                        reason: analog.reason ?? '',
+                        confidence: analog.confidence ?? 0,
                     });
                     edgeCount++;
                 }
@@ -148,11 +224,16 @@ let GraphService = GraphService_1 = class GraphService {
                     const contraId = `contra_${contra.id}`;
                     await session.run(`MERGE (c:Contraindication {id: $id}) SET c.name = $condition`, { id: contraId, condition: contra.condition });
                     await session.run(`MATCH (d:Drug {id: $drugId}), (c:Contraindication {id: $contraId})
-             MERGE (d)-[:HAS_CONTRAINDICATION {severity: $severity}]->(c)`, { drugId: String(drug.id), contraId, severity: contra.severity ?? '' });
+             MERGE (d)-[:HAS_CONTRAINDICATION {severity: $severity}]->(c)`, { drugId, contraId, severity: contra.severity ?? '' });
                     nodeCount++;
                     edgeCount++;
                 }
             }
+            await session.run(`MATCH (s:Substance) WHERE NOT (s)<-[:CONTAINS]-() DETACH DELETE s`);
+            await session.run(`MATCH (g:PharmacologicalGroup) WHERE NOT (g)<-[:BELONGS_TO]-() DETACH DELETE g`);
+            await session.run(`MATCH (i:Indication) WHERE NOT (i)<-[:HAS_INDICATION]-() DETACH DELETE i`);
+            await session.run(`MATCH (c:Contraindication) WHERE NOT (c)<-[:HAS_CONTRAINDICATION]-() DETACH DELETE c`);
+            await session.run(`MATCH (syn:Synonym) WHERE NOT (syn)<-[:HAS_SYNONYM]-() DETACH DELETE syn`);
         }
         finally {
             await session.close();
@@ -182,6 +263,8 @@ let GraphService = GraphService_1 = class GraphService {
             const g = rec['g']?.properties;
             const ind = rec['ind']?.properties;
             const cont = rec['cont']?.properties;
+            const da = rec['da']?.properties;
+            const syn = rec['syn']?.properties;
             const iw = rec['iw']?.properties;
             if (d?.id)
                 addNode(d.id, d.name || d.id, 'Drug', { atcCode: d.atcCode });
@@ -209,6 +292,16 @@ let GraphService = GraphService_1 = class GraphService {
                 addNode(cont.id, cont.name || cont.id, 'Contraindication');
                 if (d?.id)
                     addEdge(d.id, cont.id, 'HAS_CONTRAINDICATION');
+            }
+            if (da?.id) {
+                addNode(da.id, da.name || da.id, 'Drug', { atcCode: da.atcCode });
+                if (d?.id)
+                    addEdge(d.id, da.id, 'ANALOG_OF');
+            }
+            if (syn?.id) {
+                addNode(syn.id, syn.name || syn.id, 'Synonym');
+                if (s?.id)
+                    addEdge(s.id, syn.id, 'HAS_SYNONYM');
             }
         }
         const nodes = Array.from(nodesMap.values());

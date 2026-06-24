@@ -4,7 +4,9 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-do
 import { observer } from 'mobx-react-lite';
 import { authStore } from './stores/auth.store';
 import { drugsStore } from './stores/drugs.store';
+import { uiStore } from './stores/ui.store';
 import { Icon } from './components/Icon';
+import { MobileNav } from './components/MobileNav';
 import { LoginPage } from './pages/Login/LoginPage';
 import { RegisterPage } from './pages/Register/RegisterPage';
 import { SearchPage } from './pages/Search/SearchPage';
@@ -24,9 +26,6 @@ const NAV_ITEMS = [
   { to: '/search', label: 'Справочник', desc: 'Каталог и карточки препаратов', icon: 'pill', tone: 'teal' },
   { to: '/interactions', label: 'Взаимодействия', desc: 'Проверка совместимости списка', icon: 'zap', tone: 'amber' },
   { to: '/contra', label: 'Противопоказания', desc: 'Учёт возраста и контекста', icon: 'ban', tone: 'red' },
-];
-
-const ADMIN_NAV_ITEMS = [
   { to: '/graph', label: 'Граф знаний', desc: 'Связи в Neo4j', icon: 'network', tone: 'violet' },
 ];
 
@@ -59,7 +58,21 @@ const AppShell = observer(() => {
     : profile?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${uiStore.mobilePreview ? ' app-shell--mobile-preview' : ''}`}>
+      {uiStore.mobilePreview && (
+        <div className="mobile-preview-banner">
+          <span>Мобильная версия (превью)</span>
+          <button
+            type="button"
+            className="mobile-preview-banner__btn"
+            onClick={() => uiStore.disableMobilePreview()}
+          >
+            <Icon name="x" size={14} />
+            Полная версия
+          </button>
+        </div>
+      )}
+      <div className="app-shell__frame">
       <header className="app-header">
         <NavLink to="/search" className="app-header__logo">
           <div className="app-header__logo-icon">
@@ -125,23 +138,6 @@ const AppShell = observer(() => {
             <div className="sidebar-section">
               <div className="sidebar-label">Администрирование</div>
               <nav className="sidebar-nav">
-                {ADMIN_NAV_ITEMS.map(item => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `nav-item nav-item--rich nav-item--${item.tone}${isActive ? ' active' : ''}`
-                    }
-                  >
-                    <span className={`nav-item__icon-box nav-item__icon-box--${item.tone}`}>
-                      <Icon name={item.icon} size={18} />
-                    </span>
-                    <span className="nav-item__text">
-                      <span className="nav-item__label">{item.label}</span>
-                      <span className="nav-item__desc">{item.desc}</span>
-                    </span>
-                  </NavLink>
-                ))}
                 <NavLink
                   to="/admin"
                   className={({ isActive }) =>
@@ -182,10 +178,7 @@ const AppShell = observer(() => {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/interactions" element={<InteractionsPage />} />
             <Route path="/contra" element={<ContraPage />} />
-            <Route
-              path="/graph"
-              element={authStore.isAdmin ? <GraphPage /> : <Navigate to="/forbidden" replace />}
-            />
+            <Route path="/graph" element={<GraphPage />} />
             <Route path="/analogs" element={<Navigate to="/search" replace />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route
@@ -196,6 +189,8 @@ const AppShell = observer(() => {
             <Route path="*" element={<Navigate to="/search" replace />} />
           </Routes>
         </main>
+      </div>
+      <MobileNav />
       </div>
     </div>
   );

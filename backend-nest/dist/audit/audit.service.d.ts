@@ -11,6 +11,9 @@ export declare class AuditService {
     private readonly logger;
     constructor(prisma: PrismaService);
     list(take?: number): Promise<AuditRowDto[]>;
+    clear(userId?: number, ipAddress?: string): Promise<{
+        deleted: number;
+    }>;
     log(data: {
         userId?: number;
         action: string;
